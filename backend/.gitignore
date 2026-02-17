@@ -1,0 +1,10 @@
+#env files
+.env
+.env.local
+.env.development
+#logs
+logs
+*.log
+npm-debug.log*
+#node modules
+node_modules
