@@ -1,9 +1,9 @@
-import { Request,Response } from "express";
+import { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import { User } from "../../models/User";
-const register = async (req: Request, res: Response) => {
+const register = async (req: Request, res: Response): Promise<any> => {
     const { email, password } = req.body;
-    const existingUser = await User.findOne({ where: { email } });
+    const existingUser = await User.findOne({ email });
     if (existingUser) {
         return res.status(400).json({ message: "User already exists" });
     }
