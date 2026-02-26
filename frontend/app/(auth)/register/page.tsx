@@ -5,6 +5,7 @@ import { fetchApi } from "../../lib/api";
 import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
+    const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
@@ -17,7 +18,7 @@ export default function RegisterPage() {
         try {
             await fetchApi("/auth/register", {
                 method: "POST",
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify({ name, email, password }),
             });
             setSuccess(true);
             setTimeout(() => {
@@ -51,12 +52,24 @@ export default function RegisterPage() {
                 )}
                 <form onSubmit={handleRegister} className="flex flex-col gap-6">
                     <div>
+                        <label className="block mb-2 text-muted">Full Name</label>
+                        <input
+                            type="text"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            required
+                            autoComplete="name"
+                            className="w-full p-3 rounded-lg border border-card-border bg-black/20 text-white outline-none focus:border-primary transition-colors"
+                        />
+                    </div>
+                    <div>
                         <label className="block mb-2 text-muted">Email</label>
                         <input
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
+                            autoComplete="email"
                             className="w-full p-3 rounded-lg border border-card-border bg-black/20 text-white outline-none focus:border-primary transition-colors"
                         />
                     </div>
@@ -67,6 +80,7 @@ export default function RegisterPage() {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
+                            autoComplete="new-password"
                             className="w-full p-3 rounded-lg border border-card-border bg-black/20 text-white outline-none focus:border-primary transition-colors"
                         />
                     </div>

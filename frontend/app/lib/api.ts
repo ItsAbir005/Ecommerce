@@ -1,16 +1,19 @@
-const API_URL = "http://localhost:3000/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
-export async function fetchApi(endpoint: string, options: RequestInit = {}) {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+type FetchOptions = RequestInit & { token?: string };
+
+export async function fetchApi(endpoint: string, options: FetchOptions = {}) {
+    const { token: overrideToken, ...fetchOptions } = options;
+    const token = overrideToken || (typeof window !== "undefined" ? localStorage.getItem("token") : null);
 
     const headers = {
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...options.headers,
+        ...fetchOptions.headers,
     };
 
     const response = await fetch(`${API_URL}${endpoint}`, {
-        ...options,
+        ...fetchOptions,
         headers,
     });
 

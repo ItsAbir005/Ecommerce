@@ -1,21 +1,55 @@
+"use client";
+
+import { useAuth } from "./context/AuthContext";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+
 export default function HomePage() {
+    const { user } = useAuth();
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
     return (
         <div className="container-custom mt-16 flex flex-col items-center text-center min-h-[80vh] relative">
             <div className="relative z-10">
-                <h1 className="text-5xl md:text-7xl font-bold leading-tight mb-6 tracking-tight">
-                    Next-Generation <br /> <span className="gradient-text">Shopping Experience</span>
-                </h1>
-                <p className="text-muted text-lg md:text-xl max-w-2xl mx-auto mb-12 leading-relaxed">
-                    Discover curated products with an unparalleled design. Elevate your lifestyle with our premium collections.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                    <a href="/products" className="btn btn-primary px-8 py-4 text-lg">
-                        Explore Collection
-                    </a>
-                    <a href="/register" className="btn bg-white/5 border border-card-border px-8 py-4 text-lg">
-                        Create Account
-                    </a>
-                </div>
+                {mounted && user ? (
+                    <>
+                        <h1 className="text-5xl md:text-7xl font-bold leading-tight mb-6 tracking-tight">
+                            Welcome back, <br /> <span className="gradient-text">{user.name}</span>!
+                        </h1>
+                        <p className="text-muted text-lg md:text-xl max-w-2xl mx-auto mb-12 leading-relaxed">
+                            Ready to continue your unparalleled shopping journey? Discover what's new today.
+                        </p>
+                        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                            <Link href="/products" className="btn btn-primary px-8 py-4 text-lg">
+                                Continue Shopping
+                            </Link>
+                            <Link href="/profile" className="btn bg-white/5 border border-card-border px-8 py-4 text-lg">
+                                View Profile
+                            </Link>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <h1 className="text-5xl md:text-7xl font-bold leading-tight mb-6 tracking-tight">
+                            Next-Generation <br /> <span className="gradient-text">Shopping Experience</span>
+                        </h1>
+                        <p className="text-muted text-lg md:text-xl max-w-2xl mx-auto mb-12 leading-relaxed">
+                            Discover curated products with an unparalleled design. Elevate your lifestyle with our premium collections.
+                        </p>
+                        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                            <Link href="/products" className="btn btn-primary px-8 py-4 text-lg">
+                                Explore Collection
+                            </Link>
+                            <Link href="/register" className="btn bg-white/5 border border-card-border px-8 py-4 text-lg">
+                                Create Account
+                            </Link>
+                        </div>
+                    </>
+                )}
             </div>
 
             {/* Decorative Blob */}
