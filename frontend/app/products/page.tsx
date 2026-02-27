@@ -5,10 +5,11 @@ import { fetchApi } from "../lib/api";
 
 type Product = {
     _id: string;
-    name: string;
     description: string;
     price: number;
     stock: number;
+    title: string;
+    images?: string[];
 };
 
 export default function ProductsPage() {
@@ -16,16 +17,21 @@ export default function ProductsPage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // For now we will mock the backend products or just display empty if none exist yet.
-        setLoading(false);
-        setProducts([
-            { _id: "1", name: "Nebula Smart Watch", description: "Stay connected with a universe of features on your wrist.", price: 299.99, stock: 10 },
-            { _id: "2", name: "Aura Noise-Cancelling Headphones", description: "Immerse yourself in crystal clear sound with zero distractions.", price: 199.99, stock: 25 },
-            { _id: "3", name: "Zenith Mechanical Keyboard", description: "Premium tactile feedback with a customizable RGB layout.", price: 149.99, stock: 5 },
-            { _id: "4", name: "Lunar Wireless Charger", description: "Elegantly designed fast-charging pad for all your devices.", price: 49.99, stock: 50 },
-            { _id: "5", name: "Echo Smart Speaker", description: "Your virtual assistant wrapped in a sleek, minimalist shell.", price: 89.99, stock: 15 },
-            { _id: "6", name: "Quantum 4K Monitor", description: "Experience visual perfection with this ultra-wide display.", price: 499.99, stock: 8 },
-        ]);
+        const loadProducts = async () => {
+            try {
+                const data = await fetchApi("/products");
+                // API returns { products: Product[], page, pages, total }
+                if (data && data.products) {
+                    setProducts(data.products);
+                }
+            } catch (error) {
+                console.error("Failed to fetch products:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadProducts();
     }, []);
 
     const handleAddToCart = (id: string) => {
@@ -49,10 +55,14 @@ export default function ProductsPage() {
                 {products.map(product => (
                     <div key={product._id} className="card flex flex-col h-full group">
                         <div className="h-48 bg-black/40 rounded-lg mb-6 flex items-center justify-center group-hover:bg-black/20 transition-colors">
-                            <span className="text-5xl opacity-50 group-hover:opacity-80 transition-opacity">📦</span>
+                            {product.images?.[0] ? (
+                                <img src={product.images[0]} alt={product.title} className="w-full h-full object-cover rounded-lg" />
+                            ) : (
+                                <span className="text-5xl opacity-50 group-hover:opacity-80 transition-opacity">📦</span>
+                            )}
                         </div>
                         <div className="flex justify-between items-start mb-2 space-x-4">
-                            <h3 className="text-xl font-semibold leading-tight">{product.name}</h3>
+                            <h3 className="text-xl font-semibold leading-tight">{product.title}</h3>
                             <span className="text-emerald-500 font-bold whitespace-nowrap">${product.price}</span>
                         </div>
                         <p className="text-muted flex-grow mb-6 text-sm leading-relaxed">{product.description}</p>

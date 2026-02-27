@@ -19,6 +19,7 @@ export interface IUser extends Document {
         sms: boolean;
         push: boolean;
     };
+    role: 'user' | 'admin';
 }
 
 const AddressSchema = new Schema({
@@ -42,7 +43,8 @@ const UserSchema: Schema = new Schema(
             email: { type: Boolean, default: true },
             sms: { type: Boolean, default: true },
             push: { type: Boolean, default: true },
-        }
+        },
+        role: { type: String, enum: ['user', 'admin'], default: 'user' }
     },
     { timestamps: true }
 );

@@ -1,11 +1,7 @@
 import { withSentryConfig } from "@sentry/nextjs";
 
 /** @type {import('next').NextConfig} */
-const nextConfig = {
-    experimental: {
-        instrumentationHook: true,
-    },
-};
+const nextConfig = {};
 
 export default withSentryConfig(nextConfig, {
     org: "your-org",
@@ -14,11 +10,6 @@ export default withSentryConfig(nextConfig, {
     silent: !process.env.CI,
 
     widenClientFileUpload: true,
-    reactComponentAnnotation: {
-        enabled: true,
-    },
     tunnelRoute: "/monitoring",
     hideSourceMaps: true,
-
-    disableLogger: true,
 });

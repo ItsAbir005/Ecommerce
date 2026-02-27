@@ -4,6 +4,7 @@ import { connectDB } from "./config/db";
 import cors from "cors";
 import authRoutes from "./routes/auth.routes";
 import userRoutes from "./modules/users/user.routes";
+import productRoutes from "./modules/products/product.routes";
 import * as Sentry from "@sentry/node";
 
 dotenv.config();
@@ -14,6 +15,7 @@ app.use(express.json());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/products", productRoutes);
 
 app.get("/api/debug-sentry", function mainHandler(req, res) {
     throw new Error("My first Sentry error!");

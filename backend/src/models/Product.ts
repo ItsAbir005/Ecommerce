@@ -6,6 +6,13 @@ export interface IProduct extends Document {
     price: number;
     stock: number;
     category_id: mongoose.Types.ObjectId;
+    images: string[];
+    variants: {
+        size: string;
+        color: string;
+        stock: number;
+    }[];
+    discount: number;
 }
 
 const ProductSchema: Schema = new Schema(
@@ -15,6 +22,15 @@ const ProductSchema: Schema = new Schema(
         price: { type: Number, required: true },
         stock: { type: Number, required: true, min: 0 },
         category_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
+        images: [{ type: String }],
+        variants: [
+            {
+                size: { type: String },
+                color: { type: String },
+                stock: { type: Number, required: true, min: 0, default: 0 },
+            }
+        ],
+        discount: { type: Number, default: 0, min: 0, max: 100 },
     },
     { timestamps: true }
 );
