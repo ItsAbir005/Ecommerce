@@ -1,0 +1,194 @@
+import { Response } from "express";
+import { AuthRequest } from "../../middleware/auth.middleware";
+import { User, IUser } from "../../models/User";
+import bcrypt from "bcrypt";
+
+// === 1. Profile Management ===
+
+export const getProfile = async (req: AuthRequest, res: Response): Promise<any> => {
+    try {
+        const user = req.user;
+        if (!user) return res.status(404).json({ message: "User not found" });
+        res.status(200).json(user);
+    } catch (error) {
+        res.status(500).json({ message: "Server Error", error });
+    }
+};
+
+export const updateProfile = async (req: AuthRequest, res: Response): Promise<any> => {
+    try {
+        const { name, email } = req.body;
+        const userId = req.user?._id;
+
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { name, email },
+            { new: true, runValidators: true }
+        ).select("-password");
+
+        if (!updatedUser) return res.status(404).json({ message: "User not found" });
+        res.status(200).json({ message: "Profile updated successfully", user: updatedUser });
+    } catch (error) {
+        res.status(500).json({ message: "Server Error", error });
+    }
+};
+
+export const uploadProfileImage = async (req: AuthRequest, res: Response): Promise<any> => {
+    try {
+        const userId = req.user?._id;
+        const profileImage = req.file?.path;
+
+        if (!profileImage) return res.status(400).json({ message: "No image provided" });
+
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { profileImage },
+            { new: true }
+        ).select("-password");
+
+        res.status(200).json({ message: "Profile image uploaded successfully", user: updatedUser });
+    } catch (error) {
+        res.status(500).json({ message: "Server Error", error });
+    }
+};
+
+export const changePassword = async (req: AuthRequest, res: Response): Promise<any> => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        const userId = req.user?._id;
+
+        const user = await User.findById(userId);
+        if (!user || !user.password) return res.status(404).json({ message: "User not found" });
+
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        if (!isMatch) return res.status(400).json({ message: "Invalid current password" });
+
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(newPassword, salt);
+        await user.save();
+
+        res.status(200).json({ message: "Password changed successfully" });
+    } catch (error) {
+        res.status(500).json({ message: "Server Error", error });
+    }
+};
+
+export const deleteAccount = async (req: AuthRequest, res: Response): Promise<any> => {
+    try {
+        const userId = req.user?._id;
+        await User.findByIdAndDelete(userId);
+        res.status(200).json({ message: "Account deleted successfully" });
+    } catch (error) {
+        res.status(500).json({ message: "Server Error", error });
+    }
+};
+
+// === 3. User Preferences ===
+
+export const addAddress = async (req: AuthRequest, res: Response): Promise<any> => {
+    try {
+        const userId = req.user?._id;
+        const { street, city, state, zipCode, country, isDefault } = req.body;
+
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        if (isDefault) {
+            user.addresses.forEach(addr => addr.isDefault = false);
+        }
+
+        user.addresses.push({ street, city, state, zipCode, country, isDefault });
+        await user.save();
+
+        res.status(201).json({ message: "Address added successfully", addresses: user.addresses });
+    } catch (error) {
+        res.status(500).json({ message: "Server Error", error });
+    }
+};
+
+export const updateAddress = async (req: AuthRequest, res: Response): Promise<any> => {
+    try {
+        const userId = req.user?._id;
+        const addressId = req.params.id;
+        const { street, city, state, zipCode, country, isDefault } = req.body;
+
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        // Using standard JS array find since TS interface didn't declare Types.DocumentArray
+        const address: any = user.addresses.find((a: any) => String(a._id) === addressId);
+        if (!address) return res.status(404).json({ message: "Address not found" });
+
+        if (isDefault) {
+            user.addresses.forEach(addr => addr.isDefault = false);
+        }
+
+        Object.assign(address, { street, city, state, zipCode, country, isDefault });
+        await user.save();
+
+        res.status(200).json({ message: "Address updated successfully", addresses: user.addresses });
+    } catch (error) {
+        res.status(500).json({ message: "Server Error", error });
+    }
+};
+
+export const deleteAddress = async (req: AuthRequest, res: Response): Promise<any> => {
+    try {
+        const userId = req.user?._id;
+        const addressId = req.params.id;
+
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        const addressIndex = user.addresses.findIndex((a: any) => String(a._id) === addressId);
+        if (addressIndex === -1) return res.status(404).json({ message: "Address not found" });
+
+        user.addresses.splice(addressIndex, 1);
+        await user.save();
+
+        res.status(200).json({ message: "Address deleted successfully", addresses: user.addresses });
+    } catch (error) {
+        res.status(500).json({ message: "Server Error", error });
+    }
+};
+
+export const setDefaultShippingAddress = async (req: AuthRequest, res: Response): Promise<any> => {
+    try {
+        const userId = req.user?._id;
+        const addressId = req.params.id;
+
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        const address: any = user.addresses.find((a: any) => String(a._id) === addressId);
+        if (!address) return res.status(404).json({ message: "Address not found" });
+
+        user.addresses.forEach(addr => addr.isDefault = false);
+        address.isDefault = true;
+
+        await user.save();
+
+        res.status(200).json({ message: "Default address updated", addresses: user.addresses });
+    } catch (error) {
+        res.status(500).json({ message: "Server Error", error });
+    }
+};
+
+export const updateNotificationSettings = async (req: AuthRequest, res: Response): Promise<any> => {
+    try {
+        const userId = req.user?._id;
+        const { email, sms, push } = req.body;
+
+        const user = await User.findByIdAndUpdate(
+            userId,
+            { notificationSettings: { email, sms, push } },
+            { new: true, runValidators: true }
+        ).select("-password");
+
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        res.status(200).json({ message: "Notification settings updated", notificationSettings: user.notificationSettings });
+    } catch (error) {
+        res.status(500).json({ message: "Server Error", error });
+    }
+};

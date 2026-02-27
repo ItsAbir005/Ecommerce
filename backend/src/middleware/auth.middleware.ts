@@ -1,11 +1,13 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
+import { User, IUser } from "../models/User";
+
 export interface AuthRequest extends Request {
-    user?: { id: string };
+    user?: IUser;
 }
 
-export const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction): any => {
+export const authMiddleware = async (req: AuthRequest, res: Response, next: NextFunction): Promise<any> => {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -16,7 +18,17 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { id: string };
-        req.user = decoded;
+        const user = await User.findById(decoded.id).select("-password");
+
+        if (!user) {
+            return res.status(401).json({ message: "User not found" });
+        }
+
+        if (user.isBlocked) {
+            return res.status(403).json({ message: "Account is blocked" });
+        }
+
+        req.user = user;
         next();
     } catch (err) {
         return res.status(401).json({ message: "Token is not valid" });

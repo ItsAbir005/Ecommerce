@@ -12,18 +12,24 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@sentry/node": "^10.40.0",
+    "@sentry/profiling-node": "^10.40.0",
     "bcrypt": "^6.0.0",
+    "cloudinary": "^1.41.3",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.2.2"
+    "mongoose": "^9.2.2",
+    "multer": "^2.0.2",
+    "multer-storage-cloudinary": "^4.0.0"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.0.0",
     "@types/node": "^25.2.3",
     "nodemon": "^3.1.14",
     "ts-node": "^10.9.2",
