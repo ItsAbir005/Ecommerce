@@ -8,6 +8,7 @@ export interface IProduct extends Document {
     category_id: mongoose.Types.ObjectId;
     images: string[];
     variants: {
+        _id?: mongoose.Types.ObjectId;
         size: string;
         color: string;
         stock: number;
