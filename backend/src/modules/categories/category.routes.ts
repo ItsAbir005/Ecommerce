@@ -1,16 +1,21 @@
-import { Router } from "express";
-import { Category } from "../../models/Category";
+import { Router } from 'express';
+import { authMiddleware } from '../../middleware/auth.middleware';
+import { adminMiddleware } from '../../middleware/admin.middleware';
+import {
+    getAllCategories, getCategoryTree, getProductsByCategory,
+    createCategory, updateCategory, deleteCategory,
+} from './category.controller';
 
 const router = Router();
 
-// GET /api/categories — returns all categories
-router.get("/", async (req, res): Promise<any> => {
-    try {
-        const categories = await Category.find({}).sort({ name: 1 });
-        return res.json(categories);
-    } catch (error) {
-        return res.status(500).json({ message: "Server error fetching categories" });
-    }
-});
+// ── Public routes ─────────────────────────────────────────────────────────────
+router.get('/tree', getCategoryTree);           // GET /api/categories/tree
+router.get('/:id/products', getProductsByCategory);    // GET /api/categories/:id/products
+router.get('/', getAllCategories);          // GET /api/categories
+
+// ── Admin routes ──────────────────────────────────────────────────────────────
+router.post('/', authMiddleware as any, adminMiddleware as any, createCategory);
+router.put('/:id', authMiddleware as any, adminMiddleware as any, updateCategory);
+router.delete('/:id', authMiddleware as any, adminMiddleware as any, deleteCategory);
 
 export default router;

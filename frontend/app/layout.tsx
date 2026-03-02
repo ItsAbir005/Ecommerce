@@ -21,7 +21,11 @@ function Navigation() {
         </Link>
         <div className="flex gap-6 items-center">
           <Link href="/" className="text-muted hover:text-white transition-colors duration-200 text-sm">Home</Link>
+          <Link href="/categories" className="text-muted hover:text-white transition-colors duration-200 text-sm">Categories</Link>
           <Link href="/products" className="text-muted hover:text-white transition-colors duration-200 text-sm">Products</Link>
+          {mounted && user && (
+            <Link href="/orders" className="text-muted hover:text-white transition-colors duration-200 text-sm">Orders</Link>
+          )}
 
           {/* Cart icon with live badge */}
           <Link href="/cart" className="relative text-muted hover:text-white transition-colors duration-200 text-sm flex items-center gap-1.5">

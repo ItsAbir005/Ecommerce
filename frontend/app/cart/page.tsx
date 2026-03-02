@@ -243,9 +243,12 @@ export default function CartPage() {
                                 <span className="gradient-text">${summary.total.toFixed(2)}</span>
                             </div>
 
-                            <button className="btn btn-primary w-full py-3 text-base mt-2">
+                            <Link
+                                href="/orders/checkout"
+                                className="btn btn-primary w-full py-3 text-base mt-2 block text-center"
+                            >
                                 Proceed to Checkout →
-                            </button>
+                            </Link>
 
                             <Link
                                 href="/products"
