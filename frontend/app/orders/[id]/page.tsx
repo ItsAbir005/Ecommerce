@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useAuth } from "../../context/AuthContext";
 import { fetchApi } from "../../lib/api";
 
@@ -38,11 +38,16 @@ export default function OrderDetailPage() {
     const { user } = useAuth();
     const router = useRouter();
     const params = useParams();
+    const searchParams = useSearchParams();
     const id = params?.id as string;
+
+    const paymentSuccess = searchParams?.get("payment") === "success";
+    const paymentCancel = searchParams?.get("payment") === "cancel";
 
     const [order, setOrder] = useState<OrderDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [cancelling, setCancelling] = useState(false);
+    const [paying, setPaying] = useState(false);
     const [reason, setReason] = useState("");
     const [showCancel, setShowCancel] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -71,6 +76,23 @@ export default function OrderDetailPage() {
             setError(err.message || "Failed to cancel order.");
         } finally {
             setCancelling(false);
+        }
+    };
+
+    const handlePayment = async () => {
+        setPaying(true);
+        setError(null);
+        try {
+            const data = await fetchApi("/payments", {
+                method: "POST",
+                body: JSON.stringify({ order_id: order._id }),
+            });
+            if (data.checkout_url) {
+                window.location.href = data.checkout_url;
+            }
+        } catch (err: any) {
+            setError(err.message || "Failed to initiate payment.");
+            setPaying(false);
         }
     };
 
@@ -130,8 +152,8 @@ export default function OrderDetailPage() {
                         {STATUS_STEPS.map((step, i) => (
                             <div key={step} className="flex flex-col items-center z-10">
                                 <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all ${i <= currentStep
-                                        ? "bg-primary border-primary text-white"
-                                        : "bg-card-bg border-card-border text-muted"
+                                    ? "bg-primary border-primary text-white"
+                                    : "bg-card-bg border-card-border text-muted"
                                     }`}>
                                     {i < currentStep ? "✓" : i + 1}
                                 </div>
@@ -141,6 +163,23 @@ export default function OrderDetailPage() {
                             </div>
                         ))}
                     </div>
+                </div>
+            )}
+
+            {/* Payment redirection feedback */}
+            {paymentSuccess && order.payment_status === "unpaid" && (
+                <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-emerald-400 text-sm font-medium">
+                    ✅ Payment successful! Your order will be confirmed shortly once validated by Stripe.
+                </div>
+            )}
+            {paymentSuccess && order.payment_status === "paid" && (
+                <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-emerald-400 text-sm font-medium">
+                    ✅ Payment confirmed! Thank you for your order.
+                </div>
+            )}
+            {paymentCancel && (
+                <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-yellow-400 text-sm font-medium">
+                    ⚠️ Payment was cancelled. You can try paying again when you're ready.
                 </div>
             )}
 
@@ -236,6 +275,17 @@ export default function OrderDetailPage() {
                             className="w-full px-4 py-2.5 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 text-sm transition-all"
                         >
                             Cancel Order
+                        </button>
+                    )}
+
+                    {/* Pay button */}
+                    {order.payment_status === "unpaid" && !["cancelled", "returned"].includes(order.status) && (
+                        <button
+                            onClick={handlePayment}
+                            disabled={paying}
+                            className="w-full mt-3 px-4 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold transition-all disabled:opacity-50"
+                        >
+                            {paying ? "Redirecting to Stripe..." : "Pay Now"}
                         </button>
                     )}
 

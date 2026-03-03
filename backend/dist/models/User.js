@@ -35,11 +35,27 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.User = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
+const AddressSchema = new mongoose_1.Schema({
+    street: { type: String, required: true },
+    city: { type: String, required: true },
+    state: { type: String, required: true },
+    zipCode: { type: String, required: true },
+    country: { type: String, required: true },
+    isDefault: { type: Boolean, default: false }
+}, { _id: true });
 const UserSchema = new mongoose_1.Schema({
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String },
-    role: { type: String, enum: ['user', 'admin'], default: 'user' },
+    profileImage: { type: String },
+    isBlocked: { type: Boolean, default: false },
+    addresses: [AddressSchema],
+    notificationSettings: {
+        email: { type: Boolean, default: true },
+        sms: { type: Boolean, default: true },
+        push: { type: Boolean, default: true },
+    },
+    role: { type: String, enum: ['user', 'admin'], default: 'user' }
 }, { timestamps: true });
 exports.User = mongoose_1.default.model('User', UserSchema);
 //# sourceMappingURL=User.js.map

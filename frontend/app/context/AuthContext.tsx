@@ -4,12 +4,22 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { fetchApi } from "../lib/api";
 import { useRouter } from "next/navigation";
 
-interface User {
+export interface Address {
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+    isDefault: boolean;
+}
+
+export interface User {
     _id: string;
     name: string;
     email: string;
     profileImage?: string;
     role?: string;
+    addresses?: Address[];
 }
 
 interface AuthContextType {
@@ -38,10 +48,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             try {
                 const userData = await fetchApi("/auth/me");
                 setUser(userData);
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Failed to fetch user", error);
-                localStorage.removeItem("token");
-                setUser(null);
+                // Only log out if it's explicitly a 401 Unauthorized or Token Invalid error
+                if (error.message?.includes("Token") || error.message?.includes("authorization") || error.message?.includes("not found")) {
+                    localStorage.removeItem("token");
+                    setUser(null);
+                }
             } finally {
                 setLoading(false);
             }

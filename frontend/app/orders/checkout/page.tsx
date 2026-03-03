@@ -11,8 +11,14 @@ export default function CheckoutPage() {
     const { items, summary, clearCart } = useCart();
     const router = useRouter();
 
+    const defaultAddress = user?.addresses?.find(a => a.isDefault) || user?.addresses?.[0];
+
     const [form, setForm] = useState({
-        street: "", city: "", state: "", zip: "", country: "India",
+        street: defaultAddress?.street || "",
+        city: defaultAddress?.city || "",
+        state: defaultAddress?.state || "",
+        zip: defaultAddress?.zipCode || "",
+        country: defaultAddress?.country || "India",
     });
     const [placing, setPlacing] = useState(false);
     const [error, setError] = useState<string | null>(null);

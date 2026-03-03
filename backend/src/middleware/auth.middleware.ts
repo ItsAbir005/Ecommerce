@@ -30,7 +30,8 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
 
         req.user = user;
         next();
-    } catch (err) {
-        return res.status(401).json({ message: "Token is not valid" });
+    } catch (err: any) {
+        console.error("JWT Verification failed:", err.message, "Full Token:", token.substring(0, 20) + "...");
+        return res.status(401).json({ message: "Token is not valid", error: err.message });
     }
 };

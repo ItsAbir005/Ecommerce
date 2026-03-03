@@ -41,6 +41,15 @@ const ProductSchema = new mongoose_1.Schema({
     price: { type: Number, required: true },
     stock: { type: Number, required: true, min: 0 },
     category_id: { type: mongoose_1.default.Schema.Types.ObjectId, ref: 'Category', required: true },
+    images: [{ type: String }],
+    variants: [
+        {
+            size: { type: String },
+            color: { type: String },
+            stock: { type: Number, required: true, min: 0, default: 0 },
+        }
+    ],
+    discount: { type: Number, default: 0, min: 0, max: 100 },
 }, { timestamps: true });
 exports.Product = mongoose_1.default.model('Product', ProductSchema);
 //# sourceMappingURL=Product.js.map
