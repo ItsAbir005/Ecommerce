@@ -15,6 +15,7 @@
   "dependencies": {
     "@sentry/node": "^10.40.0",
     "@sentry/profiling-node": "^10.40.0",
+    "amqplib": "^0.10.9",
     "axios": "^1.13.5",
     "bcrypt": "^6.0.0",
     "cloudinary": "^1.41.3",
@@ -25,15 +26,18 @@
     "mongoose": "^9.2.2",
     "multer": "^2.0.2",
     "multer-storage-cloudinary": "^4.0.0",
+    "redis": "^5.11.0",
     "stripe": "^20.4.0"
   },
   "devDependencies": {
+    "@types/amqplib": "^0.10.8",
     "@types/bcrypt": "^6.0.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.0.0",
     "@types/node": "^25.2.3",
+    "@types/redis": "^4.0.10",
     "nodemon": "^3.1.14",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",

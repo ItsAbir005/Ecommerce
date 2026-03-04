@@ -7,7 +7,7 @@ import { useCart } from "../../context/CartContext";
 import { fetchApi } from "../../lib/api";
 
 export default function CheckoutPage() {
-    const { user } = useAuth();
+    const { user, loading: authLoading } = useAuth();
     const { items, summary, clearCart } = useCart();
     const router = useRouter();
 
@@ -24,8 +24,8 @@ export default function CheckoutPage() {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!user) router.push("/login");
-    }, [user]);
+        if (!authLoading && !user) router.push("/login");
+    }, [user, authLoading, router]);
 
     const handlePlaceOrder = async () => {
         if (!form.street || !form.city || !form.zip || !form.country) {
@@ -139,17 +139,17 @@ export default function CheckoutPage() {
 
                         {/* Items */}
                         <div className="space-y-3 mb-5 max-h-64 overflow-y-auto pr-1">
-                            {items.map((item) => (
-                                <div key={item._id} className="flex gap-3 items-center">
+                            {items.map((item, index) => (
+                                <div key={`${item.product_id}-${index}`} className="flex gap-3 items-center">
                                     <div className="w-12 h-12 rounded-lg overflow-hidden bg-black/40 shrink-0">
-                                        {item.product_id?.images?.[0] ? (
-                                            <img src={item.product_id.images[0]} alt="" className="w-full h-full object-cover" />
+                                        {item.image ? (
+                                            <img src={item.image} alt="" className="w-full h-full object-cover" />
                                         ) : (
                                             <div className="flex items-center justify-center h-full text-xl opacity-30">📦</div>
                                         )}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium line-clamp-1">{item.product_id?.title}</p>
+                                        <p className="text-sm font-medium line-clamp-1">{item.title}</p>
                                         <p className="text-xs text-muted">Qty: {item.quantity}</p>
                                     </div>
                                     <p className="text-sm font-semibold text-emerald-400 shrink-0">

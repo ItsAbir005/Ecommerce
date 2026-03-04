@@ -18,7 +18,7 @@ type Order = {
 
 const STATUS_COLOR: Record<string, string> = {
     pending: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30",
-    confirmed: "bg-blue-500/20 text-blue-300 border-blue-500/30",
+    confirmed: "bg-indigo-500/20 text-indigo-300 border-indigo-500/30",
     paid: "bg-indigo-500/20 text-indigo-300 border-indigo-500/30",
     shipped: "bg-cyan-500/20 text-cyan-300 border-cyan-500/30",
     delivered: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
@@ -27,12 +27,12 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 const STATUS_ICON: Record<string, string> = {
-    pending: "⏳", confirmed: "✅", paid: "💳", shipped: "🚚",
+    pending: "⏳", confirmed: "💳", paid: "💳", shipped: "🚚",
     delivered: "📦", cancelled: "❌", returned: "↩️",
 };
 
 export default function OrdersPage() {
-    const { user } = useAuth();
+    const { user, loading: authLoading } = useAuth();
     const router = useRouter();
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
@@ -40,7 +40,9 @@ export default function OrdersPage() {
     const [totalPages, setTotalPages] = useState(1);
     const [statusFilter, setStatusFilter] = useState("");
 
-    useEffect(() => { if (!user) router.push("/login"); }, [user]);
+    useEffect(() => {
+        if (!authLoading && !user) router.push("/login");
+    }, [user, authLoading, router]);
 
     useEffect(() => {
         if (!user) return;
@@ -58,7 +60,7 @@ export default function OrdersPage() {
         load();
     }, [user, page, statusFilter]);
 
-    const statuses = ["", "pending", "confirmed", "paid", "shipped", "delivered", "cancelled", "returned"];
+    const statuses = ["", "pending", "paid", "shipped", "delivered", "cancelled", "returned"];
 
     return (
         <div className="container-custom py-12 min-h-[80vh]">
@@ -77,8 +79,8 @@ export default function OrdersPage() {
                         key={s}
                         onClick={() => { setStatusFilter(s); setPage(1); }}
                         className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${statusFilter === s
-                                ? "bg-primary border-primary text-white"
-                                : "border-card-border text-muted hover:text-white hover:border-white/30"
+                            ? "bg-primary border-primary text-white"
+                            : "border-card-border text-muted hover:text-white hover:border-white/30"
                             }`}
                     >
                         {s ? `${STATUS_ICON[s]} ${s.charAt(0).toUpperCase() + s.slice(1)}` : "All Orders"}

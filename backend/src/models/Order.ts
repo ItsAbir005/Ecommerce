@@ -19,7 +19,7 @@ export interface IShippingAddress {
     country: string;
 }
 
-export type OrderStatus = 'pending' | 'confirmed' | 'paid' | 'shipped' | 'delivered' | 'cancelled' | 'returned';
+export type OrderStatus = 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled' | 'returned';
 export type PaymentStatus = 'unpaid' | 'paid' | 'refunded';
 
 export interface IOrder extends Document {
@@ -67,7 +67,7 @@ const OrderSchema = new Schema(
         total_amount: { type: Number, required: true },
         status: {
             type: String,
-            enum: ['pending', 'confirmed', 'paid', 'shipped', 'delivered', 'cancelled', 'returned'],
+            enum: ['pending', 'paid', 'shipped', 'delivered', 'cancelled', 'returned'],
             default: 'pending',
         },
         payment_status: {

@@ -5,8 +5,9 @@
 
 import mongoose from 'mongoose';
 import { Order, OrderStatus } from '../../models/Order';
-import { Cart } from '../../models/Cart';
 import { Product } from '../../models/Product';
+import { getCart, clearCart as clearRedisCart } from '../cart/cart.service';
+import { rabbitMQ } from '../../config/rabbitmq';
 
 const TAX_RATE = 0.08;
 const FREE_SHIPPING = 50;
@@ -14,8 +15,7 @@ const SHIPPING_COST = 5.99;
 
 // ── Valid status transitions ───────────────────────────────────────────────────
 const STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-    pending: ['confirmed', 'cancelled'],
-    confirmed: ['paid', 'cancelled'],
+    pending: ['paid', 'cancelled'],
     paid: ['shipped', 'cancelled'],
     shipped: ['delivered'],
     delivered: ['returned'],
@@ -27,15 +27,8 @@ const STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
 export const createOrder = async (userId: string, shippingAddress: {
     street: string; city: string; state: string; zip: string; country: string;
 }) => {
-    const cart = await Cart.findOne({ user_id: userId }).populate<{
-        items: Array<{
-            _id: mongoose.Types.ObjectId;
-            product_id: any;
-            variant_id?: mongoose.Types.ObjectId;
-            quantity: number;
-            price_at_addition: number;
-        }>;
-    }>({ path: 'items.product_id', select: 'title price discount stock images variants' });
+    // 1. Fetch from Redis instead of MongoDB
+    const cart = await getCart(userId);
 
     if (!cart || cart.items.length === 0) throw new Error('Cart is empty');
 
@@ -45,17 +38,19 @@ export const createOrder = async (userId: string, shippingAddress: {
     let discountAmount = 0;
 
     for (const item of cart.items) {
-        const product = item.product_id;
-        if (!product) throw new Error('A product in your cart no longer exists');
+        // Fetch fresh product from DB for absolute stock validation to prevent race conditions (basic level)
+        const product = await Product.findById(item.product_id);
+        if (!product) throw new Error(`A product in your cart (${item.title}) no longer exists`);
 
         const available = item.variant_id
-            ? product.variants?.find((v: any) => v._id?.toString() === item.variant_id?.toString())?.stock ?? 0
+            ? product.variants?.find((v: any) => v._id?.toString() === item.variant_id)?.stock ?? 0
             : product.stock;
 
         if (available < item.quantity)
             throw new Error(`Insufficient stock for "${product.title}". Only ${available} left.`);
 
         const originalPrice = product.price;
+        // Re-calculate effective price to ensure we don't trust stale cache prices entirely during checkout
         const discountedPrice = product.discount > 0
             ? parseFloat((originalPrice * (1 - product.discount / 100)).toFixed(2))
             : originalPrice;
@@ -77,10 +72,8 @@ export const createOrder = async (userId: string, shippingAddress: {
         });
     }
 
-    // ── Temporarily reserve stock (soft reserve — permanent on payment) ────────
-    for (const item of orderItems) {
-        await Product.findByIdAndUpdate(item.product_id, { $inc: { stock: -item.quantity } });
-    }
+    // ── Emit Async Event (Message Queue Pattern) ─────────────────────────────
+    // Instead of doing synchronous stock updates, we offload to the background queue.
 
     const tax = parseFloat((subtotal * TAX_RATE).toFixed(2));
     const shipping = subtotal >= FREE_SHIPPING ? 0 : SHIPPING_COST;
@@ -99,8 +92,16 @@ export const createOrder = async (userId: string, shippingAddress: {
         payment_status: 'unpaid',
     });
 
-    // ── Clear cart ────────────────────────────────────────────────────────────
-    await Cart.findOneAndUpdate({ user_id: userId }, { $set: { items: [] } });
+    // ── Clear cart from Redis ──────────────────────────────────────────────────
+    await clearRedisCart(userId);
+
+    // Publish event for workers to handle stock deduction, emails, etc.
+    await rabbitMQ.publishEvent('order.created', {
+        orderId: order._id,
+        userId: userId,
+        items: orderItems,
+        totalAmount: order.total_amount
+    });
 
     return order;
 };
@@ -134,7 +135,7 @@ export const cancelOrder = async (orderId: string, userId: string, reason?: stri
     if (!order) throw new Error('Order not found');
     if (order.user_id.toString() !== userId) throw new Error('Not your order');
 
-    const cancellable: OrderStatus[] = ['pending', 'confirmed'];
+    const cancellable: OrderStatus[] = ['pending', 'paid'];
     if (!cancellable.includes(order.status)) {
         throw new Error(`Cannot cancel an order with status "${order.status}"`);
     }

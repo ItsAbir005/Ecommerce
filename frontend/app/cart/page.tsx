@@ -134,21 +134,21 @@ export default function CartPage() {
                 {/* ── Cart Items ── */}
                 <div className="flex-1 space-y-4">
                     {items.map((item, index) => {
-                        const product = item.product_id;
-                        const isUpdating = updatingId === item._id;
+                        // Redis cart stores data FLAT directly on the item
+                        const uniqueId = String(item.product_id);
+                        const isUpdating = updatingId === uniqueId;
                         const finalPrice = item.price_at_addition;
                         const lineTotal = (finalPrice * item.quantity).toFixed(2);
-                        const outOfStock = product.stock === 0;
 
                         return (
                             <div
-                                key={item._id}
+                                key={`${uniqueId}-${index}`}
                                 className={`card !p-5 flex flex-col sm:flex-row gap-5 transition-opacity ${isUpdating ? "opacity-60" : ""}`}
                             >
                                 {/* Image */}
                                 <div className="w-24 h-24 shrink-0 rounded-xl overflow-hidden bg-black/40">
-                                    {product.images?.[0] ? (
-                                        <img src={product.images[0]} alt={product.title} className="w-full h-full object-cover" />
+                                    {item.image ? (
+                                        <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
                                     ) : (
                                         <div className="flex items-center justify-center h-full text-3xl opacity-30">📦</div>
                                     )}
@@ -156,17 +156,16 @@ export default function CartPage() {
 
                                 {/* Details */}
                                 <div className="flex-1 min-w-0">
-                                    <h3 className="font-semibold text-base leading-snug mb-1 line-clamp-2">{product.title}</h3>
-
-                                    {outOfStock && (
-                                        <span className="text-xs text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full">Out of stock</span>
+                                    <h3 className="font-semibold text-base leading-snug mb-1 line-clamp-2">{item.title}</h3>
+                                    {item.variant_id && (
+                                        <p className="text-xs text-muted mb-1">Variant: {item.variant_id}</p>
                                     )}
 
                                     {/* Quantity control */}
                                     <div className="flex items-center gap-3 mt-3">
                                         <div className="flex items-center border border-card-border rounded-lg overflow-hidden">
                                             <button
-                                                onClick={() => handleQtyChange(item._id, item.quantity - 1)}
+                                                onClick={() => handleQtyChange(uniqueId, item.quantity - 1)}
                                                 disabled={isUpdating || item.quantity <= 1}
                                                 className="w-9 h-9 flex items-center justify-center text-muted hover:text-white hover:bg-white/5 transition-colors disabled:opacity-30 text-lg font-medium"
                                             >
@@ -174,15 +173,15 @@ export default function CartPage() {
                                             </button>
                                             <span className="w-10 text-center text-sm font-semibold">{item.quantity}</span>
                                             <button
-                                                onClick={() => handleQtyChange(item._id, item.quantity + 1)}
-                                                disabled={isUpdating || item.quantity >= product.stock}
+                                                onClick={() => handleQtyChange(uniqueId, item.quantity + 1)}
+                                                disabled={isUpdating}
                                                 className="w-9 h-9 flex items-center justify-center text-muted hover:text-white hover:bg-white/5 transition-colors disabled:opacity-30 text-lg font-medium"
                                             >
                                                 +
                                             </button>
                                         </div>
                                         <button
-                                            onClick={() => removeItem(item._id)}
+                                            onClick={() => removeItem(uniqueId)}
                                             disabled={isUpdating}
                                             className="text-xs text-red-400 hover:text-red-300 transition-colors disabled:opacity-50"
                                         >
@@ -195,8 +194,8 @@ export default function CartPage() {
                                 <div className="text-right shrink-0">
                                     <p className="text-emerald-400 font-bold text-lg">${lineTotal}</p>
                                     <p className="text-muted text-xs mt-1">${finalPrice.toFixed(2)} each</p>
-                                    {product.discount > 0 && (
-                                        <p className="text-red-400 text-xs mt-0.5">-{product.discount}% off</p>
+                                    {item.discount > 0 && (
+                                        <p className="text-red-400 text-xs mt-0.5">-{item.discount}% off</p>
                                     )}
                                 </div>
                             </div>

@@ -79,3 +79,23 @@ export const refund = async (req: Request, res: Response): Promise<void> => {
         res.status(500).json({ success: false, message: error.message || 'Internal server error' });
     }
 };
+
+export const verifyPayment = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const order_id = req.params.order_id as string;
+        if (!order_id) {
+            res.status(400).json({ success: false, message: 'order_id is required' });
+            return;
+        }
+
+        const result = await PaymentService.verifyPaymentStatus(order_id);
+        res.status(200).json({
+            success: true,
+            message: 'Payment status verified',
+            data: result,
+        });
+    } catch (error: any) {
+        console.error('Payment verification error:', error);
+        res.status(500).json({ success: false, message: error.message || 'Internal server error' });
+    }
+};

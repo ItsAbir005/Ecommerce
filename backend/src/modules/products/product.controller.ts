@@ -1,5 +1,19 @@
 import { Request, Response } from "express";
 import { Product } from "../../models/Product";
+import { redisClient } from "../../config/redis";
+
+// === Helper: Invalidate Product List Caches ===
+const invalidateProductCaches = async () => {
+    try {
+        const keys = await redisClient.sMembers('products:cache');
+        if (keys.length > 0) {
+            await redisClient.del(keys);
+        }
+        await redisClient.del('products:cache'); // Clear the set itself
+    } catch (err) {
+        console.error("Redis cache invalidation error:", err);
+    }
+};
 
 // === Admin Controllers ===
 
@@ -22,6 +36,10 @@ export const createProduct = async (req: Request, res: Response): Promise<any> =
         });
 
         const createdProduct = await product.save();
+
+        // Invalidate product cache
+        await invalidateProductCaches();
+
         return res.status(201).json(createdProduct);
     } catch (error) {
         console.error("Error creating product:", error);
@@ -49,6 +67,11 @@ export const updateProduct = async (req: Request, res: Response): Promise<any> =
             product.discount = discount !== undefined ? discount : product.discount;
 
             const updatedProduct = await product.save();
+
+            // Invalidate product cache
+            await invalidateProductCaches();
+            await redisClient.del(`product:${req.params.id}`);
+
             return res.json(updatedProduct);
         } else {
             return res.status(404).json({ message: "Product not found" });
@@ -68,6 +91,11 @@ export const deleteProduct = async (req: Request, res: Response): Promise<any> =
 
         if (product) {
             await product.deleteOne();
+
+            // Invalidate product cache
+            await invalidateProductCaches();
+            await redisClient.del(`product:${req.params.id}`);
+
             return res.json({ message: "Product removed" });
         } else {
             return res.status(404).json({ message: "Product not found" });
@@ -87,6 +115,15 @@ export const getProducts = async (req: Request, res: Response): Promise<any> => 
     try {
         const pageSize = Number(req.query.limit) || 10;
         const page = Number(req.query.page) || 1;
+
+        // Generate a unique cache key based on the query parameters
+        const cacheKey = `products:cache:${Buffer.from(JSON.stringify(req.query)).toString('base64')}`;
+
+        // Attempt to get data from cache
+        const cachedData = await redisClient.get(cacheKey);
+        if (cachedData) {
+            return res.json(JSON.parse(cachedData));
+        }
 
         // Search
         const keyword = req.query.search
@@ -122,12 +159,19 @@ export const getProducts = async (req: Request, res: Response): Promise<any> => 
             .limit(pageSize)
             .skip(pageSize * (page - 1));
 
-        return res.json({
+        const responseData = {
             products,
             page,
             pages: Math.ceil(count / pageSize),
             total: count
-        });
+        };
+
+        // Cache the response for 1 hour
+        await redisClient.setEx(cacheKey, 3600, JSON.stringify(responseData));
+        // Add this key to a master list so we can easily bust all list caches
+        await redisClient.sAdd('products:cache', cacheKey);
+
+        return res.json(responseData);
     } catch (error) {
         console.error("Error fetching products:", error);
         return res.status(500).json({ message: "Server error fetching products" });
@@ -139,9 +183,18 @@ export const getProducts = async (req: Request, res: Response): Promise<any> => 
 // @access  Public
 export const getProductById = async (req: Request, res: Response): Promise<any> => {
     try {
+        const cacheKey = `product:${req.params.id}`;
+        const cachedProduct = await redisClient.get(cacheKey);
+
+        if (cachedProduct) {
+            return res.json(JSON.parse(cachedProduct));
+        }
+
         const product = await Product.findById(req.params.id);
 
         if (product) {
+            // Cache single product for 1 hour
+            await redisClient.setEx(cacheKey, 3600, JSON.stringify(product));
             return res.json(product);
         } else {
             return res.status(404).json({ message: "Product not found" });

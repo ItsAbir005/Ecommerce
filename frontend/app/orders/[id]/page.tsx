@@ -24,7 +24,7 @@ type OrderDetail = {
 
 const STATUS_COLOR: Record<string, string> = {
     pending: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30",
-    confirmed: "bg-blue-500/20 text-blue-300 border-blue-500/30",
+    confirmed: "bg-indigo-500/20 text-indigo-300 border-indigo-500/30", // Map legacy "confirmed" equivalent to paid
     paid: "bg-indigo-500/20 text-indigo-300 border-indigo-500/30",
     shipped: "bg-cyan-500/20 text-cyan-300 border-cyan-500/30",
     delivered: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
@@ -32,10 +32,10 @@ const STATUS_COLOR: Record<string, string> = {
     returned: "bg-gray-500/20 text-gray-300 border-gray-500/30",
 };
 
-const STATUS_STEPS = ["pending", "confirmed", "paid", "shipped", "delivered"];
+const STATUS_STEPS = ["pending", "paid", "shipped", "delivered"];
 
 export default function OrderDetailPage() {
-    const { user } = useAuth();
+    const { user, loading: authLoading } = useAuth();
     const router = useRouter();
     const params = useParams();
     const searchParams = useSearchParams();
@@ -52,15 +52,38 @@ export default function OrderDetailPage() {
     const [showCancel, setShowCancel] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => { if (!user) router.push("/login"); }, [user]);
+    // FIX: Only redirect if authentication has finished loading and user is still null
+    useEffect(() => {
+        if (!authLoading && !user) {
+            router.push("/login");
+        }
+    }, [user, authLoading, router]);
 
     useEffect(() => {
         if (!user || !id) return;
-        fetchApi(`/orders/${id}`)
-            .then(setOrder)
-            .catch(() => setError("Order not found."))
-            .finally(() => setLoading(false));
-    }, [user, id]);
+
+        const loadOrderData = async () => {
+            try {
+                // If payment=success, let's explicitly verify the payment to bypass webhook delays
+                if (paymentSuccess) {
+                    try {
+                        await fetchApi(`/payments/verify/${id}`);
+                    } catch (err) {
+                        console.error("Payment verification fallback failed:", err);
+                    }
+                }
+
+                const data = await fetchApi(`/orders/${id}`);
+                setOrder(data);
+            } catch (err) {
+                setError("Order not found.");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadOrderData();
+    }, [user, id, paymentSuccess]);
 
     const handleCancel = async () => {
         setCancelling(true);
@@ -123,8 +146,9 @@ export default function OrderDetailPage() {
 
     if (!order) return null;
 
-    const isCancellable = ["pending", "confirmed"].includes(order.status);
-    const currentStep = STATUS_STEPS.indexOf(order.status);
+    const isCancellable = ["pending", "paid"].includes(order.status) || order.status === "confirmed";
+    const displayStatus = order.status === "confirmed" ? "paid" : order.status;
+    const currentStep = STATUS_STEPS.indexOf(displayStatus);
 
     return (
         <div className="container-custom py-12 min-h-[80vh]">

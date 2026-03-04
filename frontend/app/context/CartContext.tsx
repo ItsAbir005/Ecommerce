@@ -5,17 +5,14 @@ import { fetchApi } from "../lib/api";
 import { useAuth } from "./AuthContext";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+// Redis cart stores product data FLAT directly on the item (no Mongoose populate)
 export type CartItem = {
-    _id: string;
-    product_id: {
-        _id: string;
-        title: string;
-        price: number;
-        discount: number;
-        stock: number;
-        images: string[];
-    };
+    product_id: string;       // raw MongoDB ObjectId string
     variant_id?: string;
+    title: string;            // snapshot at time of adding
+    image: string;
+    price: number;
+    discount: number;
     quantity: number;
     price_at_addition: number;
 };

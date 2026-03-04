@@ -76,7 +76,7 @@ export class PaymentService {
                     if (order) {
                         order.payment_status = 'paid';
                         if (order.status === 'pending') {
-                            order.status = 'confirmed';
+                            order.status = 'paid';
                         }
                         await order.save();
                     }
@@ -135,5 +135,40 @@ export class PaymentService {
         }
 
         return refund;
+    }
+
+    static async verifyPaymentStatus(orderId: string) {
+        // Get the latest payment for this order
+        const payment = await Payment.findOne({ order_id: orderId }).sort({ _id: -1 });
+        if (!payment) throw new Error("Payment record not found");
+
+        if (payment.status === 'successful') {
+            return { verified: true, status: 'paid' };
+        }
+
+        if (payment.status === 'pending' && payment.transaction_id && payment.transaction_id.startsWith('cs_')) {
+            try {
+                const session = await stripe.checkout.sessions.retrieve(payment.transaction_id);
+                if (session.payment_status === 'paid') {
+                    payment.status = 'successful';
+                    payment.transaction_id = (session.payment_intent as string) || session.id;
+                    await payment.save();
+
+                    const order = await Order.findById(orderId);
+                    if (order) {
+                        order.payment_status = 'paid';
+                        if (order.status === 'pending') {
+                            order.status = 'paid';
+                        }
+                        await order.save();
+                    }
+                    return { verified: true, status: 'paid' };
+                }
+            } catch (error: any) {
+                console.error("Stripe session retrieval error:", error.message);
+            }
+        }
+
+        return { verified: false, status: payment.status };
     }
 }
