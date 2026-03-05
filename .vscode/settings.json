@@ -1,3 +1,8 @@
 {
-    "css.lint.unknownAtRules": "ignore"
+    "css.lint.unknownAtRules": "ignore",
+    "files.exclude": {
+        "**/.git": false,
+        "**/node_modules": false
+    },
+    "explorer.autoReveal": true
 }

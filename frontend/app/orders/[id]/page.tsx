@@ -190,15 +190,45 @@ export default function OrderDetailPage() {
                 </div>
             )}
 
-            {/* Payment redirection feedback */}
+            {/* ── 🎉 Payment Success Banner (Queue Events) ───────────────────── */}
+            {paymentSuccess && order.payment_status === "paid" && (
+                <div className="mb-6 overflow-hidden rounded-2xl border border-emerald-500/25"
+                    style={{ background: "linear-gradient(135deg, rgba(52,211,153,0.07) 0%, rgba(19,19,31,0.9) 100%)" }}>
+                    <div className="flex items-center gap-3 px-6 pt-5 pb-4 border-b border-emerald-500/15">
+                        <span style={{ fontSize: "28px" }}>🎉</span>
+                        <div>
+                            <p className="font-bold text-emerald-400 text-base">Payment Confirmed!</p>
+                            <p className="text-sm text-muted mt-0.5">Your order is being processed. Here's what happened behind the scenes:</p>
+                        </div>
+                    </div>
+                    {/* Queue event steps */}
+                    <div className="px-6 py-4 space-y-3">
+                        {[
+                            { icon: "📦", label: "Inventory Reserved", desc: "Stock deducted from warehouse", done: true, delay: "0s" },
+                            { icon: "📧", label: "Confirmation Email Sent", desc: "Order summary sent to your inbox", done: true, delay: "0.15s" },
+                            { icon: "💳", label: "Payment Processed", desc: "Stripe payment confirmed via webhook", done: true, delay: "0.3s" },
+                            { icon: "🚚", label: "Shipping Initiated", desc: "Preparing your package for dispatch", done: true, delay: "0.45s" },
+                        ].map(({ icon, label, desc, done, delay }) => (
+                            <div key={label} className="flex items-center gap-3 text-sm"
+                                style={{ animation: `fadeInUp 0.4s ease ${delay} both` }}>
+                                <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-base"
+                                    style={{ background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.25)" }}>
+                                    {icon}
+                                </div>
+                                <div className="flex-1">
+                                    <span className="text-white font-medium">{label}</span>
+                                    <span className="text-muted ml-2 text-xs">{desc}</span>
+                                </div>
+                                {done && <span className="text-emerald-400 font-bold text-base">✓</span>}
+                            </div>
+                        ))}
+                    </div>
+                    <style>{`@keyframes fadeInUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }`}</style>
+                </div>
+            )}
             {paymentSuccess && order.payment_status === "unpaid" && (
                 <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-emerald-400 text-sm font-medium">
                     ✅ Payment successful! Your order will be confirmed shortly once validated by Stripe.
-                </div>
-            )}
-            {paymentSuccess && order.payment_status === "paid" && (
-                <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-emerald-400 text-sm font-medium">
-                    ✅ Payment confirmed! Thank you for your order.
                 </div>
             )}
             {paymentCancel && (
@@ -206,6 +236,7 @@ export default function OrderDetailPage() {
                     ⚠️ Payment was cancelled. You can try paying again when you're ready.
                 </div>
             )}
+
 
             {/* Cancellation info */}
             {order.status === "cancelled" && order.cancellation_reason && (

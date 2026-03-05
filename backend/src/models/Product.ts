@@ -36,4 +36,15 @@ const ProductSchema: Schema = new Schema(
     { timestamps: true }
 );
 
+// ── Indexes ────────────────────────────────────────────────────────────────────
+// Text index: enables full-text search on title and description
+ProductSchema.index({ title: 'text', description: 'text' });
+// Category page: fast filtering by category + sort by price
+ProductSchema.index({ category_id: 1, price: 1 });
+// Deals page: filter by discount > 0
+ProductSchema.index({ discount: -1 });
+// Price range filtering
+ProductSchema.index({ price: 1 });
+
 export const Product = mongoose.model<IProduct>('Product', ProductSchema);
+

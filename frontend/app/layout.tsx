@@ -3,8 +3,10 @@
 import "./globals.css";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { CartProvider, useCart } from "./context/CartContext";
+import { ToastProvider } from "./components/Toast";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+
 
 function Navigation() {
   const { user, logout } = useAuth();
@@ -62,8 +64,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="antialiased">
         <AuthProvider>
           <CartProvider>
-            <Navigation />
-            <main>{children}</main>
+            <ToastProvider>
+              <Navigation />
+              <main>{children}</main>
+            </ToastProvider>
           </CartProvider>
         </AuthProvider>
       </body>

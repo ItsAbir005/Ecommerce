@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import { fetchApi } from "../lib/api";
+import { useToast } from "../components/Toast";
 
 type Order = {
     _id: string;
@@ -34,6 +35,8 @@ const STATUS_ICON: Record<string, string> = {
 export default function OrdersPage() {
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const { toast } = useToast();
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
@@ -43,6 +46,15 @@ export default function OrdersPage() {
     useEffect(() => {
         if (!authLoading && !user) router.push("/login");
     }, [user, authLoading, router]);
+
+    // Show toast if redirected back from payment
+    useEffect(() => {
+        const payment = searchParams?.get("payment");
+        if (payment === "success") {
+            toast("success", "Payment Successful! 🎉", "Your order is confirmed and emails have been sent.");
+        }
+    }, []);
+
 
     useEffect(() => {
         if (!user) return;

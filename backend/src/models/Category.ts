@@ -21,5 +21,12 @@ const CategorySchema: Schema = new Schema(
     { timestamps: true }
 );
 
+// ── Indexes ────────────────────────────────────────────────────────────────────
+// Text search on category name
+CategorySchema.index({ name: 'text' });
+// Hierarchical queries: all subcategories of a parent
+CategorySchema.index({ parent_id: 1 });
+// slug is already unique on the field level
 
 export const Category = mongoose.model<ICategory>('Category', CategorySchema);
+

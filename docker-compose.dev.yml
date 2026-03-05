@@ -23,9 +23,17 @@ services:
     restart: always
     ports:
       - "5672:5672"
-      - "15672:15672"
+      - "15672:15672"   # RabbitMQ Management UI
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: mailhog_smtp
+    restart: always
+    ports:
+      - "1025:1025"   # SMTP port (backend sends here)
+      - "8025:8025"   # MailHog Web UI (view emails)
 
 volumes:
   mongo-data:

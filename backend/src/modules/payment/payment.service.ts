@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import { Payment } from '../../models/Payment';
 import { Order } from '../../models/Order';
+import { rabbitMQ } from '../../config/rabbitmq';
 
 // Ensure STRIPE_SECRET_KEY is populated in production
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder', {
@@ -80,6 +81,14 @@ export class PaymentService {
                         }
                         await order.save();
                     }
+
+                    // ── Publish payment.success to message queue ─────────────
+                    // Workers will send payment confirmation email + initiate shipping
+                    await rabbitMQ.publishEvent('payment.success', {
+                        orderId: payment.order_id.toString(),
+                        userId: order?.user_id?.toString(),
+                        amount: payment.amount,
+                    });
                 }
             }
         } else if (event.type === 'payment_intent.payment_failed') {
@@ -113,8 +122,8 @@ export class PaymentService {
 
     static async processRefund(paymentId: string) {
         const payment = await Payment.findById(paymentId);
-        if (!payment) throw new Error("Payment not found");
-        if (payment.status !== 'successful') throw new Error("Only successful payments can be refunded");
+        if (!payment) throw new Error('Payment not found');
+        if (payment.status !== 'successful') throw new Error('Only successful payments can be refunded');
 
         // The transaction_id generally acts as the Payment Intent when 'successful'
         const refund = await stripe.refunds.create({
@@ -132,6 +141,14 @@ export class PaymentService {
                 order.status = 'cancelled';
                 await order.save();
             }
+
+            // ── Publish refund job to message queue ───────────────────────────
+            // Background worker will send refund confirmation email
+            await rabbitMQ.publishEvent('job.process_refund', {
+                orderId: payment.order_id.toString(),
+                userId: order?.user_id?.toString(),
+                amount: payment.amount,
+            });
         }
 
         return refund;
@@ -140,7 +157,7 @@ export class PaymentService {
     static async verifyPaymentStatus(orderId: string) {
         // Get the latest payment for this order
         const payment = await Payment.findOne({ order_id: orderId }).sort({ _id: -1 });
-        if (!payment) throw new Error("Payment record not found");
+        if (!payment) throw new Error('Payment record not found');
 
         if (payment.status === 'successful') {
             return { verified: true, status: 'paid' };
@@ -165,7 +182,7 @@ export class PaymentService {
                     return { verified: true, status: 'paid' };
                 }
             } catch (error: any) {
-                console.error("Stripe session retrieval error:", error.message);
+                console.error('Stripe session retrieval error:', error.message);
             }
         }
 

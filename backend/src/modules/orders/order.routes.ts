@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authMiddleware } from '../../middleware/auth.middleware';
 import { adminMiddleware } from '../../middleware/admin.middleware';
+import { checkoutRateLimiter } from '../../middleware/rateLimit.middleware';
 import {
     createOrder, getMyOrders, getOrderById,
     cancelOrder, getAllOrders, updateOrderStatus,
@@ -12,13 +13,14 @@ const router = Router();
 router.use(authMiddleware as any);
 
 // ── User routes ─────────────────────────────────────────────────────────────
-router.post('/', createOrder);       // POST   /api/orders
-router.get('/my', getMyOrders);       // GET    /api/orders/my
-router.get('/:id', getOrderById);      // GET    /api/orders/:id
-router.put('/:id/cancel', cancelOrder);       // PUT    /api/orders/:id/cancel
+// POST /api/orders — rate limited: 10 checkout attempts per minute per IP
+router.post('/', checkoutRateLimiter, createOrder);
+router.get('/my', getMyOrders);
+router.get('/:id', getOrderById);
+router.put('/:id/cancel', cancelOrder);
 
 // ── Admin routes ─────────────────────────────────────────────────────────────
-router.get('/', adminMiddleware as any, getAllOrders);           // GET  /api/orders
-router.put('/:id/status', adminMiddleware as any, updateOrderStatus);     // PUT  /api/orders/:id/status
+router.get('/', adminMiddleware as any, getAllOrders);
+router.put('/:id/status', adminMiddleware as any, updateOrderStatus);
 
 export default router;

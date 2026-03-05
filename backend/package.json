@@ -26,6 +26,7 @@
     "mongoose": "^9.2.2",
     "multer": "^2.0.2",
     "multer-storage-cloudinary": "^4.0.0",
+    "nodemailer": "^8.0.1",
     "redis": "^5.11.0",
     "stripe": "^20.4.0"
   },
@@ -37,6 +38,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.0.0",
     "@types/node": "^25.2.3",
+    "@types/nodemailer": "^7.0.11",
     "@types/redis": "^4.0.10",
     "nodemon": "^3.1.14",
     "ts-node": "^10.9.2",

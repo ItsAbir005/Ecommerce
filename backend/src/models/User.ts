@@ -49,4 +49,13 @@ const UserSchema: Schema = new Schema(
     { timestamps: true }
 );
 
+// ── Indexes ────────────────────────────────────────────────────────────────────
+// email is already unique=true on the field, but explicit index improves lookup speed
+UserSchema.index({ email: 1 }, { unique: true });
+// Admin panel: filter/sort users by role
+UserSchema.index({ role: 1 });
+// Moderation: quickly find all blocked users
+UserSchema.index({ isBlocked: 1 });
+
 export const User = mongoose.model<IUser>('User', UserSchema);
+
