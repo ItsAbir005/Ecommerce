@@ -29,6 +29,9 @@ class RabbitMQConfig {
             const { startBackgroundJobWorkers } = await import('../modules/jobs/job.subscriber');
             await startBackgroundJobWorkers();
 
+            const { startShipmentWorkers } = await import('../modules/shipping/shipment.subscriber');
+            await startShipmentWorkers();
+
         } catch (error) {
             console.error('RabbitMQ Connection Error', error);
         }
@@ -47,11 +50,15 @@ class RabbitMQConfig {
         await this.channel.assertQueue('payment_queue', { durable: true });
         await this.channel.bindQueue('payment_queue', 'ecommerce_events', 'payment.*');
 
-        // 3. Background jobs: reminders, refund emails, shipping notifications
+        // 3. Background jobs: reminders, refund emails
         await this.channel.assertQueue('background_jobs_queue', { durable: true });
         await this.channel.bindQueue('background_jobs_queue', 'ecommerce_events', 'job.*');
 
-        console.log('📬 RabbitMQ queues ready: order_processing_queue | payment_queue | background_jobs_queue');
+        // 4. Shipment events: driver assignment
+        await this.channel.assertQueue('shipment_queue', { durable: true });
+        await this.channel.bindQueue('shipment_queue', 'ecommerce_events', 'shipment.*');
+
+        console.log('📬 RabbitMQ queues ready: order | payment | background_jobs | shipment');
     }
 
     /**

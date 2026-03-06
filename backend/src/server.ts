@@ -1,7 +1,17 @@
 import "./instrument";
+import http from "http";
 import app from "./app";
+import { initSocket } from "./config/socket";
+
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+
+// Create HTTP server from Express app (required for Socket.io)
+const httpServer = http.createServer(app);
+
+// Attach Socket.io to the HTTP server
+initSocket(httpServer);
+
+httpServer.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🔌 Socket.io ready on ws://localhost:${PORT}`);
 });
- 

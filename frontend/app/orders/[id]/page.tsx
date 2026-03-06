@@ -22,6 +22,29 @@ type OrderDetail = {
     cancellation_reason?: string;
 };
 
+type Shipment = {
+    _id: string;
+    trackingCode: string;
+    status: string;
+    estimatedDelivery?: string;
+    driver_id?: {
+        name: string;
+        phone: string;
+        vehicleNumber: string;
+        vehicleType: string;
+    };
+};
+
+const SHIPMENT_STATUS_STEPS = ["pending", "assigned", "picked_up", "out_for_delivery", "delivered"];
+const SHIPMENT_STATUS_ICONS: Record<string, string> = {
+    pending: "⏳",
+    assigned: "🧑‍✈️",
+    picked_up: "📦",
+    out_for_delivery: "🚚",
+    delivered: "✅",
+    failed: "❌",
+};
+
 const STATUS_COLOR: Record<string, string> = {
     pending: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30",
     confirmed: "bg-indigo-500/20 text-indigo-300 border-indigo-500/30", // Map legacy "confirmed" equivalent to paid
@@ -51,6 +74,7 @@ export default function OrderDetailPage() {
     const [reason, setReason] = useState("");
     const [showCancel, setShowCancel] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [shipment, setShipment] = useState<Shipment | null>(null);
 
     // FIX: Only redirect if authentication has finished loading and user is still null
     useEffect(() => {
@@ -75,6 +99,14 @@ export default function OrderDetailPage() {
 
                 const data = await fetchApi(`/orders/${id}`);
                 setOrder(data);
+
+                // Fetch live shipment tracking (only if order is shipped/delivered)
+                try {
+                    const shipData = await fetchApi(`/shipping/order/${id}`);
+                    setShipment(shipData);
+                } catch {
+                    // No shipment yet — normal for pending/paid orders
+                }
             } catch (err) {
                 setError("Order not found.");
             } finally {
@@ -234,6 +266,91 @@ export default function OrderDetailPage() {
             {paymentCancel && (
                 <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-yellow-400 text-sm font-medium">
                     ⚠️ Payment was cancelled. You can try paying again when you're ready.
+                </div>
+            )}
+            {/* ── 🚚 Live Shipment Tracking Card ─────────────────────────── */}
+            {shipment && !['cancelled', 'returned'].includes(order.status) && (
+                <div className="mb-6 overflow-hidden rounded-2xl border"
+                    style={{ borderColor: 'rgba(251,146,60,0.25)', background: 'linear-gradient(135deg, rgba(251,146,60,0.06) 0%, rgba(19,19,31,0.9) 100%)' }}>
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-6 pt-5 pb-4"
+                        style={{ borderBottom: '1px solid rgba(251,146,60,0.12)' }}>
+                        <div className="flex items-center gap-3">
+                            <span style={{ fontSize: '24px' }}>🚚</span>
+                            <div>
+                                <p className="font-bold text-white text-sm">Live Shipment Tracking</p>
+                                <p className="text-xs mt-0.5" style={{ color: '#fb923c', fontFamily: 'monospace' }}>
+                                    {shipment.trackingCode}
+                                </p>
+                            </div>
+                        </div>
+                        <span className="text-xs px-3 py-1 rounded-full font-semibold"
+                            style={{ background: 'rgba(251,146,60,0.15)', color: '#fb923c', border: '1px solid rgba(251,146,60,0.3)' }}>
+                            {SHIPMENT_STATUS_ICONS[shipment.status]} {shipment.status.replace(/_/g, ' ').toUpperCase()}
+                        </span>
+                    </div>
+
+                    {/* Progress stepper */}
+                    <div className="px-6 py-5">
+                        <div className="flex items-start justify-between relative">
+                            <div className="absolute top-4 left-0 right-0 h-0.5" style={{ background: 'rgba(255,255,255,0.06)' }} />
+                            <div className="absolute top-4 left-0 h-0.5 transition-all duration-700"
+                                style={{
+                                    background: 'linear-gradient(90deg, #f97316, #fb923c)',
+                                    width: `${(Math.max(0, SHIPMENT_STATUS_STEPS.indexOf(shipment.status)) / (SHIPMENT_STATUS_STEPS.length - 1)) * 100}%`
+                                }} />
+                            {SHIPMENT_STATUS_STEPS.map((step, i) => {
+                                const curIdx = SHIPMENT_STATUS_STEPS.indexOf(shipment.status);
+                                const done = i <= curIdx;
+                                return (
+                                    <div key={step} className="flex flex-col items-center z-10" style={{ flex: 1 }}>
+                                        <div style={{
+                                            width: '32px', height: '32px', borderRadius: '50%',
+                                            background: done ? 'linear-gradient(135deg,#f97316,#ea580c)' : 'rgba(255,255,255,0.05)',
+                                            border: done ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            fontSize: '13px', fontWeight: 700, color: '#fff'
+                                        }}>
+                                            {i < curIdx ? '✓' : SHIPMENT_STATUS_ICONS[step]}
+                                        </div>
+                                        <span className="text-center mt-2" style={{ fontSize: '10px', color: done ? '#fb923c' : '#64748b', maxWidth: '60px', lineHeight: '1.3' }}>
+                                            {step.replace(/_/g, ' ')}
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Driver info (when assigned) */}
+                    {shipment.driver_id && (
+                        <div className="mx-6 mb-4 p-3 rounded-xl"
+                            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                            <p className="text-xs mb-2" style={{ color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Your Delivery Driver</p>
+                            <div className="flex items-center gap-3">
+                                <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'linear-gradient(135deg,#f97316,#ea580c)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>🧑‍✈️</div>
+                                <div>
+                                    <p className="font-semibold text-white text-sm">{shipment.driver_id.name}</p>
+                                    <p style={{ color: '#94a3b8', fontSize: '12px' }}>
+                                        {shipment.driver_id.vehicleType} · {shipment.driver_id.vehicleNumber}
+                                    </p>
+                                </div>
+                                <a href={`tel:${shipment.driver_id.phone}`} className="ml-auto text-xs px-3 py-1.5 rounded-lg font-medium"
+                                    style={{ background: 'rgba(251,146,60,0.15)', color: '#fb923c', border: '1px solid rgba(251,146,60,0.25)', textDecoration: 'none' }}>
+                                    📞 Call
+                                </a>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ETA */}
+                    {shipment.estimatedDelivery && shipment.status !== 'delivered' && (
+                        <p className="px-6 pb-4 text-xs" style={{ color: '#64748b' }}>
+                            Estimated delivery: <span style={{ color: '#94a3b8' }}>
+                                {new Date(shipment.estimatedDelivery).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
+                            </span>
+                        </p>
+                    )}
                 </div>
             )}
 

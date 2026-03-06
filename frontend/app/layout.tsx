@@ -28,6 +28,12 @@ function Navigation() {
           {mounted && user && (
             <Link href="/orders" className="text-muted hover:text-white transition-colors duration-200 text-sm">Orders</Link>
           )}
+          {/* Driver portal link — subtle, for drivers to navigate to their portal */}
+          <Link href="/driver/login"
+            className="text-muted hover:text-white transition-colors duration-200 text-sm"
+            title="Driver Portal">
+            🚚 <span className="hidden sm:inline">Driver</span>
+          </Link>
 
           {/* Cart icon with live badge */}
           <Link href="/cart" className="relative text-muted hover:text-white transition-colors duration-200 text-sm flex items-center gap-1.5">

@@ -64,9 +64,16 @@ export const startBackgroundJobWorkers = async () => {
 
                 } else if (routingKey === 'job.shipping_initiated') {
                     // ----------------------------------------------------------
-                    // Shipping initiated — extendable: notify warehouse, 3PL API, etc.
+                    // Shipping initiated → create shipment record → driver assignment
+                    // This is the key link: payment → shipping module
                     // ----------------------------------------------------------
                     console.log(`🚚 Shipping initiated for order: ${data.orderId}`);
+                    try {
+                        const { createShipment } = await import('../shipping/shipping.service');
+                        await createShipment(data.orderId);
+                    } catch (shipErr: any) {
+                        console.error(`⚠️  Shipment creation failed for order ${data.orderId}:`, shipErr.message);
+                    }
                     rabbitMQ.channel.ack(msg);
 
                 } else {
