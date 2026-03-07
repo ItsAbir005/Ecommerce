@@ -11,12 +11,34 @@ function AdminNav() {
     const pathname = usePathname();
     const router = useRouter();
     const [adminName, setAdminName] = useState("");
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    const fetchNotifications = async () => {
+        const token = localStorage.getItem("adminToken");
+        if (!token) return;
+        try {
+            const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+            const res = await fetch(`${API}/notifications/unread`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setUnreadCount(data.length);
+            }
+        } catch (err) {
+            console.error("Failed to fetch notifications", err);
+        }
+    };
 
     useEffect(() => {
         const profile = localStorage.getItem("adminProfile");
         if (profile) {
             setAdminName(JSON.parse(profile).name?.split(" ")[0] || "Admin");
         }
+        fetchNotifications();
+        // Poll for notifications every 30s
+        const interval = setInterval(fetchNotifications, 30000);
+        return () => clearInterval(interval);
     }, []);
 
     const handleLogout = () => {
@@ -67,7 +89,22 @@ function AdminNav() {
                 </div>
 
                 {/* Admin info + logout */}
-                <div style={{ display: "flex", alignItems: "center", gap: "12px", flexShrink: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "16px", flexShrink: 0 }}>
+                    {/* Notification Bell */}
+                    <Link href="/admin/notifications" style={{ textDecoration: "none", position: "relative" }}>
+                        <span style={{ fontSize: "20px" }}>🔔</span>
+                        {unreadCount > 0 && (
+                            <span style={{
+                                position: "absolute", top: "-4px", right: "-4px",
+                                background: "#ef4444", color: "white",
+                                fontSize: "10px", fontWeight: "bold",
+                                borderRadius: "50%", padding: "2px 5px",
+                            }}>
+                                {unreadCount}
+                            </span>
+                        )}
+                    </Link>
+
                     {adminName && (
                         <span style={{ fontSize: "13px", color: "#818cf8", fontWeight: 600 }}>
                             👤 {adminName}

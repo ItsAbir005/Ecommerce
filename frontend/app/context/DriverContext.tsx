@@ -3,8 +3,8 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { io, Socket } from "socket.io-client";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:5000";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:4000";
 
 interface DriverProfile {
     id: string;

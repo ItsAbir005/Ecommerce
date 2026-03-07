@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useDriver } from "../../../context/DriverContext";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
 
 type ShipmentStatus = "assigned" | "picked_up" | "out_for_delivery" | "delivered" | "failed";
 

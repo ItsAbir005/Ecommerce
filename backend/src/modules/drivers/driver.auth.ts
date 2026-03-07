@@ -7,6 +7,7 @@
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { Driver } from '../../models/Driver';
+import { Notification } from '../../models/Notification';
 
 const signToken = (id: string) =>
     jwt.sign({ id, role: 'driver' }, process.env.JWT_SECRET as string, {
@@ -30,9 +31,15 @@ export const registerDriver = async (req: Request, res: Response): Promise<any> 
             vehicleNumber, vehicleType: vehicleType || 'bike', licenseNumber,
         });
 
-        const token = signToken(driver._id.toString());
+        // Create an admin notification instead of sending back a token for auto-login
+        await Notification.create({
+            type: 'DRIVER_REGISTRATION',
+            message: `New driver registration: ${name} (${vehicleType})`,
+            relatedId: driver._id,
+        });
+
         res.status(201).json({
-            token,
+            message: 'Registration successful. Account pending admin approval.',
             driver: {
                 id: driver._id,
                 name: driver.name,
@@ -55,6 +62,7 @@ export const loginDriver = async (req: Request, res: Response): Promise<any> => 
         const driver = await Driver.findOne({ email });
         if (!driver) return res.status(401).json({ message: 'Invalid credentials' });
 
+        if (!driver.isApproved) return res.status(403).json({ message: 'Account is pending admin approval' });
         if (driver.isBlocked) return res.status(403).json({ message: 'Account is blocked' });
 
         const valid = await driver.comparePassword(password);

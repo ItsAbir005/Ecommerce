@@ -9,6 +9,7 @@ import {
     getDriverProfile,
 } from './driver.service';
 import { Driver } from '../../models/Driver';
+import { Notification } from '../../models/Notification';
 
 // GET /api/drivers/me
 export const getMe = async (req: DriverRequest, res: Response): Promise<any> => {
@@ -91,6 +92,29 @@ export const blockDriverHandler = async (req: Request, res: Response): Promise<a
         const driver = await Driver.findByIdAndUpdate(req.params.id, update, { new: true }).select('-password');
         if (!driver) return res.status(404).json({ message: 'Driver not found' });
         res.json(driver);
+    } catch (err: any) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// PUT /api/drivers/:id/approve  — admin: approve a new driver
+export const approveDriverHandler = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const driver = await Driver.findByIdAndUpdate(
+            req.params.id,
+            { isApproved: true },
+            { new: true }
+        ).select('-password');
+
+        if (!driver) return res.status(404).json({ message: 'Driver not found' });
+
+        // Mark associated notification as read if it exists
+        await Notification.findOneAndUpdate(
+            { relatedId: driver._id, type: 'DRIVER_REGISTRATION' },
+            { isRead: true }
+        );
+
+        res.json({ message: 'Driver approved successfully', driver });
     } catch (err: any) {
         res.status(500).json({ message: err.message });
     }

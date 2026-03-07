@@ -3,7 +3,7 @@ import http from "http";
 import app from "./app";
 import { initSocket } from "./config/socket";
 
-const PORT = process.env.PORT ? parseInt(process.env.PORT) : 5000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : 4000;
 
 // Create HTTP server from Express app (required for Socket.io)
 const httpServer = http.createServer(app);

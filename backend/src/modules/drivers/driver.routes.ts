@@ -7,6 +7,7 @@ import {
     getMe, setStatus, updateLocation,
     getActiveDeliveryHandler, getHistoryHandler,
     getAllDriversHandler, blockDriverHandler,
+    approveDriverHandler,
 } from './driver.controller';
 
 const router = Router();
@@ -26,5 +27,6 @@ router.get('/delivery/history', getHistoryHandler);
 // ── Admin routes (customer JWT + admin role) ──────────────────────────────
 router.get('/all', authMiddleware as any, adminMiddleware as any, getAllDriversHandler);
 router.put('/:id/block', authMiddleware as any, adminMiddleware as any, blockDriverHandler);
+router.put('/:id/approve', authMiddleware as any, adminMiddleware as any, approveDriverHandler);
 
 export default router;

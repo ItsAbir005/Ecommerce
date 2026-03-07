@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
 
 export default function DriverRegisterPage() {
     const router = useRouter();
@@ -28,10 +28,9 @@ export default function DriverRegisterPage() {
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.message);
-            // Save token and redirect to dashboard
-            localStorage.setItem("driverToken", data.token);
-            localStorage.setItem("driverProfile", JSON.stringify(data.driver));
-            router.push("/driver/dashboard");
+            // Show success message and redirect to login instead of auto-logging in
+            alert("Registration successful! Your account is pending admin approval.");
+            router.push("/driver/login");
         } catch (err: any) {
             setError(err.message || "Registration failed");
         } finally {

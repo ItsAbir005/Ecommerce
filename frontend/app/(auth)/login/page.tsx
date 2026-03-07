@@ -41,7 +41,7 @@ const THEME: Record<Role, { color: string; focus: string; btn: string; accent: s
     admin: { color: "#22c55e", focus: "rgba(34,197,94,0.3)", btn: "linear-gradient(135deg,#22c55e,#16a34a)", accent: "rgba(34,197,94,0.08)" },
 };
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
 
 export default function LoginPage() {
     const { login } = useAuth();

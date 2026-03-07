@@ -20,6 +20,7 @@ export interface IDriver extends Document {
         updatedAt: Date;
     };
     isBlocked: boolean;
+    isApproved: boolean; // Tracking admin approvals for new registrations
     role: 'driver';
     comparePassword(candidate: string): Promise<boolean>;
 }
@@ -49,6 +50,7 @@ const DriverSchema: Schema = new Schema(
             updatedAt: { type: Date, default: Date.now },
         },
         isBlocked: { type: Boolean, default: false },
+        isApproved: { type: Boolean, default: false }, // New drivers are pending approval
         role: { type: String, default: 'driver', immutable: true },
     },
     { timestamps: true }

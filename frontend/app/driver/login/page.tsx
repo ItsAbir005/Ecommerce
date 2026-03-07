@@ -90,7 +90,7 @@ export default function DriverLoginPage() {
 
                 <p style={{ textAlign: "center", marginTop: "20px", fontSize: "13px", color: "#64748b" }}>
                     New driver?{" "}
-                    <a href="mailto:admin@aura.com" style={{ color: "#fb923c" }}>Contact admin to register</a>
+                    <a href="/driver/register" style={{ color: "#fb923c" }}>Register an account</a>
                 </p>
             </div>
         </div>

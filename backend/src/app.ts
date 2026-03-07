@@ -13,6 +13,7 @@ import categoryRoutes from "./modules/categories/category.routes";
 import paymentRoutes from "./modules/payment/payment.routes";
 import shippingRoutes from "./modules/shipping/shipping.routes";
 import driverRoutes from "./modules/drivers/driver.routes";
+import notificationRoutes from "./modules/notifications/notification.routes";
 import * as Sentry from "@sentry/node";
 
 dotenv.config();
@@ -36,6 +37,7 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/shipping", shippingRoutes);
 app.use("/api/drivers", driverRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 app.get("/api/debug-sentry", function mainHandler(req, res) {
     throw new Error("My first Sentry error!");
