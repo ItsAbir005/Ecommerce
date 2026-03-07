@@ -68,9 +68,8 @@ const ShipmentSchema = new Schema(
 );
 
 // ── Indexes ────────────────────────────────────────────────────────────────────
-ShipmentSchema.index({ order_id: 1 }, { unique: true });
+// order_id and trackingCode unique indexes are already created by { unique: true } on the fields above
 ShipmentSchema.index({ driver_id: 1 });
 ShipmentSchema.index({ status: 1 });
-ShipmentSchema.index({ trackingCode: 1 }, { unique: true });
 
 export const Shipment = mongoose.model<IShipment>('Shipment', ShipmentSchema);

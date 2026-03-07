@@ -83,10 +83,10 @@ export const assignDriver = async (
     if (!shipment) throw new Error('Shipment not found');
     if (shipment.status !== 'pending') return shipment;
 
-    const driverId = await findNearestDriver(pickupLat, pickupLng, 50);
+    const driverId = await findNearestDriver(pickupLat, pickupLng, 5000);
 
     if (!driverId) {
-        console.warn(`⚠️  No available drivers for shipment ${shipmentId}. Will retry later.`);
+        console.warn(`⚠️  No available drivers for shipment ${shipmentId} within 5000km. Will retry later.`);
         return shipment;
     }
 
@@ -190,4 +190,42 @@ export const getShipmentByOrder = async (orderId: string) => {
     return Shipment.findOne({ order_id: orderId })
         .select('-otp') // Never expose OTP to customer
         .populate('driver_id', 'name phone vehicleNumber vehicleType');
+};
+
+// ── 6. Accept Delivery ────────────────────────────────────────────────────────
+export const acceptDelivery = async (shipmentId: string, driverId: string) => {
+    const shipment = await Shipment.findById(shipmentId);
+    if (!shipment) throw new Error('Shipment not found');
+    if (shipment.driver_id?.toString() !== driverId) throw new Error('Not your delivery');
+    if (shipment.status !== 'assigned') throw new Error('Shipment is not in assigned state');
+    // Acceptance is implicit — no status change needed; driver just starts the pickup.
+    // Mark pickedUpAt to confirm they accepted.
+    return shipment;
+};
+
+// ── 7. Reject Delivery ────────────────────────────────────────────────────────
+export const rejectDelivery = async (shipmentId: string, driverId: string) => {
+    const shipment = await Shipment.findById(shipmentId);
+    if (!shipment) throw new Error('Shipment not found');
+    if (shipment.driver_id?.toString() !== driverId) throw new Error('Not your delivery');
+    if (shipment.status !== 'assigned') throw new Error('Cannot reject a shipment that is not in assigned state');
+
+    // Unassign driver and reset to pending
+    shipment.driver_id = undefined as any;
+    shipment.status = 'pending';
+    shipment.assignedAt = undefined as any;
+    await shipment.save();
+
+    // Release driver back to available
+    await Driver.findByIdAndUpdate(driverId, { status: 'online', isAvailable: true });
+
+    // Re-publish so subscriber assigns a different driver
+    await rabbitMQ.publishEvent('shipment.created', {
+        shipmentId: shipment._id.toString(),
+        orderId: shipment.order_id.toString(),
+        deliveryAddress: shipment.deliveryAddress,
+    });
+
+    console.log(`🔄 Driver ${driverId} rejected shipment ${shipment.trackingCode}. Re-assigning...`);
+    return shipment;
 };

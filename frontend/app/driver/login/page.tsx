@@ -50,6 +50,7 @@ export default function DriverLoginPage() {
                         <label style={{ display: "block", fontSize: "13px", color: "#94a3b8", marginBottom: "6px" }}>Email</label>
                         <input
                             type="email" value={email} onChange={e => setEmail(e.target.value)} required
+                            autoComplete="username"
                             style={{
                                 width: "100%", padding: "12px 14px", background: "rgba(0,0,0,0.4)",
                                 border: "1px solid rgba(251,146,60,0.2)", borderRadius: "10px",
@@ -62,6 +63,7 @@ export default function DriverLoginPage() {
                         <label style={{ display: "block", fontSize: "13px", color: "#94a3b8", marginBottom: "6px" }}>Password</label>
                         <input
                             type="password" value={password} onChange={e => setPassword(e.target.value)} required
+                            autoComplete="current-password"
                             style={{
                                 width: "100%", padding: "12px 14px", background: "rgba(0,0,0,0.4)",
                                 border: "1px solid rgba(251,146,60,0.2)", borderRadius: "10px",

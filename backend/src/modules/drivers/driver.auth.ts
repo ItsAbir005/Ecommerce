@@ -34,8 +34,16 @@ export const registerDriver = async (req: Request, res: Response): Promise<any> 
         // Create an admin notification instead of sending back a token for auto-login
         await Notification.create({
             type: 'DRIVER_REGISTRATION',
-            message: `New driver registration: ${name} (${vehicleType})`,
+            message: `New driver registration: ${name} (${vehicleType || 'bike'})`,
             relatedId: driver._id,
+            metadata: {
+                name: driver.name,
+                email: driver.email,
+                phone: driver.phone,
+                vehicleType: driver.vehicleType,
+                vehicleNumber: driver.vehicleNumber,
+                licenseNumber: driver.licenseNumber,
+            },
         });
 
         res.status(201).json({

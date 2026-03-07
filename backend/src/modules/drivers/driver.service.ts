@@ -63,18 +63,27 @@ export const findNearestDriver = async (
     lng: number,
     radiusKm: number = 50
 ): Promise<string | null> => {
-    // geoSearch returns string[] of member names ordered by distance (ASC)
-    const driverIds: string[] = await redisClient.geoSearch(
+    // geoSearchWith returns array of { member: string, distance: number }
+    const results = await redisClient.geoSearchWith(
         GEO_KEY,
         { longitude: lng, latitude: lat },
         { radius: radiusKm, unit: 'km' },
+        ['WITHDIST'],
         { SORT: 'ASC', COUNT: 10 }
     );
+    const driverIds = results.map(r => r.member);
+
+    console.log(`[GEO] Found ${driverIds.length} candidate drivers within ${radiusKm}km`);
 
     // Verify each candidate is still online + available in DB (Redis can be stale)
     for (const driverId of driverIds) {
         const driver = await Driver.findOne({ _id: driverId, status: 'online', isAvailable: true });
-        if (driver) return driverId;
+        if (driver) {
+            console.log(`[GEO] Selected available driver: ${driverId}`);
+            return driverId;
+        } else {
+            console.log(`[GEO] Driver ${driverId} found in Redis but skipped (offline/busy in DB)`);
+        }
     }
     return null;
 };

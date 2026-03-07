@@ -81,7 +81,7 @@ function DriverNav() {
                 {/* Online toggle + logout */}
                 <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
                     <button onClick={handleToggle} disabled={toggling || driver?.status === "busy"} style={{
-                        padding: "8px 18px", borderRadius: "999px", border: "none", cursor: "pointer",
+                        padding: "8px 18px", borderRadius: "999px", cursor: "pointer",
                         fontWeight: 600, fontSize: "13px", transition: "all 0.25s",
                         background: isOnline
                             ? "linear-gradient(135deg, #22c55e, #16a34a)"
@@ -115,14 +115,31 @@ function DriverLayoutInner({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
 
     useEffect(() => {
-        if (!loading && !driver && pathname !== "/driver/login") {
+        const publicPaths = ["/driver/login", "/driver/register"];
+        if (!loading && !driver && !publicPaths.includes(pathname)) {
             router.push("/driver/login");
         }
     }, [driver, loading, pathname, router]);
 
-    if (pathname === "/driver/login") {
+    if (pathname === "/driver/login" || pathname === "/driver/register") {
         return <>{children}</>;
     }
+
+    // Don't render protected pages until context finishes reading localStorage
+    // This prevents a flash of blank/broken content with driver=null
+    if (loading) {
+        return (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "#0a0a0f" }}>
+                <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: "32px", marginBottom: "12px" }}>🚚</div>
+                    <p style={{ color: "#64748b", fontSize: "14px" }}>Loading...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // If not loading and no driver, redirect effect will handle it — show nothing
+    if (!driver) return null;
 
     return (
         <>

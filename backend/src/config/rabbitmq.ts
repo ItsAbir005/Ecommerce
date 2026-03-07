@@ -58,7 +58,19 @@ class RabbitMQConfig {
         await this.channel.assertQueue('shipment_queue', { durable: true });
         await this.channel.bindQueue('shipment_queue', 'ecommerce_events', 'shipment.*');
 
-        console.log('📬 RabbitMQ queues ready: order | payment | background_jobs | shipment');
+        // 5. Shipment retry queue: messages wait 60s then re-enter shipment_queue via DLX
+        //    Used when no driver is available — retry without losing FIFO order.
+        await this.channel.assertExchange('shipment_retry_dlx', 'direct', { durable: true });
+        await this.channel.assertQueue('shipment_retry_queue', {
+            durable: true,
+            arguments: {
+                'x-dead-letter-exchange': 'ecommerce_events',
+                'x-dead-letter-routing-key': 'shipment.created',
+                'x-message-ttl': 60000, // 60 seconds before re-entering queue
+            },
+        });
+
+        console.log('📬 RabbitMQ queues ready: order | payment | background_jobs | shipment | shipment_retry');
     }
 
     /**

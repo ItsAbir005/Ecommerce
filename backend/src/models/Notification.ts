@@ -7,6 +7,7 @@ export interface INotification extends Document {
     message: string;
     isRead: boolean;
     relatedId?: mongoose.Types.ObjectId;
+    metadata?: Record<string, any>; // Store extra info like driver name, vehicle etc.
 }
 
 const NotificationSchema: Schema = new Schema(
@@ -26,6 +27,10 @@ const NotificationSchema: Schema = new Schema(
         },
         relatedId: {
             type: mongoose.Schema.Types.ObjectId,
+            required: false,
+        },
+        metadata: {
+            type: mongoose.Schema.Types.Mixed,
             required: false,
         },
     },

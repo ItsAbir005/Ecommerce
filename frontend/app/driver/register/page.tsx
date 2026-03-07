@@ -14,6 +14,7 @@ export default function DriverRegisterPage() {
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [successMessage, setSuccessMessage] = useState("");
 
     const set = (k: string, v: string) => setForm(prev => ({ ...prev, [k]: v }));
 
@@ -28,9 +29,8 @@ export default function DriverRegisterPage() {
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.message);
-            // Show success message and redirect to login instead of auto-logging in
-            alert("Registration successful! Your account is pending admin approval.");
-            router.push("/driver/login");
+            // Show success message within the page UI
+            setSuccessMessage("Registration successful! Your account is pending admin approval.");
         } catch (err: any) {
             setError(err.message || "Registration failed");
         } finally {
@@ -42,7 +42,7 @@ export default function DriverRegisterPage() {
         <div>
             <label style={{ display: "block", fontSize: "13px", color: "#94a3b8", marginBottom: "6px" }}>{label}</label>
             <input
-                type={type} value={(form as any)[key]}
+                type={type} value={(form as any)[key]} autoComplete={type === 'password' ? 'new-password' : type === 'email' ? 'email' : 'off'}
                 onChange={e => set(key, e.target.value)} required placeholder={placeholder}
                 style={{
                     width: "100%", padding: "11px 14px", background: "rgba(0,0,0,0.4)",
@@ -71,53 +71,73 @@ export default function DriverRegisterPage() {
                     <p style={{ fontSize: "13px", color: "#94a3b8", margin: 0 }}>Register your delivery account</p>
                 </div>
 
-                <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                        {field("Full Name", "name", "text", "Rahul Kumar")}
-                        {field("Phone", "phone", "tel", "9876543210")}
-                    </div>
-                    {field("Email", "email", "email", "rahul@example.com")}
-                    {field("Password", "password", "password", "min 6 chars")}
-
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                        {field("Vehicle Number", "vehicleNumber", "text", "WB01AB1234")}
-                        <div>
-                            <label style={{ display: "block", fontSize: "13px", color: "#94a3b8", marginBottom: "6px" }}>Vehicle Type</label>
-                            <select value={form.vehicleType} onChange={e => set("vehicleType", e.target.value)}
-                                style={{
-                                    width: "100%", padding: "11px 14px", background: "rgba(0,0,0,0.6)",
-                                    border: "1px solid rgba(251,146,60,0.2)", borderRadius: "10px",
-                                    color: "#fff", fontSize: "14px", outline: "none",
-                                }}>
-                                <option value="bike">🏍️ Bike</option>
-                                <option value="car">🚗 Car</option>
-                                <option value="van">🚐 Van</option>
-                                <option value="truck">🚛 Truck</option>
-                            </select>
+                {successMessage ? (
+                    <div style={{ textAlign: "center" }}>
+                        <div style={{ display: "inline-flex", justifyContent: "center", alignItems: "center", width: "64px", height: "64px", borderRadius: "50%", background: "rgba(34, 197, 94, 0.1)", color: "#22c55e", fontSize: "32px", marginBottom: "20px" }}>
+                            ✓
                         </div>
+                        <h2 style={{ fontSize: "18px", color: "#fff", marginBottom: "12px", fontWeight: 600 }}>Registration Submitted</h2>
+                        <p style={{ fontSize: "14px", color: "#cbd5e1", lineHeight: 1.5, marginBottom: "24px" }}>
+                            {successMessage} We will notify you once your account is activated.
+                        </p>
+                        <Link href="/driver/login" style={{
+                            display: "block", padding: "12px", background: "linear-gradient(135deg, #f97316, #ea580c)",
+                            color: "#fff", textDecoration: "none", borderRadius: "10px", fontWeight: 600
+                        }}>
+                            Go to Login
+                        </Link>
                     </div>
-                    {field("License Number", "licenseNumber", "text", "LIC123456")}
+                ) : (
+                    <>
+                        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                                {field("Full Name", "name", "text", "Rahul Kumar")}
+                                {field("Phone", "phone", "tel", "9876543210")}
+                            </div>
+                            {field("Email", "email", "email", "rahul@example.com")}
+                            {field("Password", "password", "password", "min 6 chars")}
 
-                    {error && (
-                        <div style={{ padding: "10px 14px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "8px", color: "#f87171", fontSize: "13px" }}>
-                            {error}
-                        </div>
-                    )}
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                                {field("Vehicle Number", "vehicleNumber", "text", "WB01AB1234")}
+                                <div>
+                                    <label style={{ display: "block", fontSize: "13px", color: "#94a3b8", marginBottom: "6px" }}>Vehicle Type</label>
+                                    <select value={form.vehicleType} onChange={e => set("vehicleType", e.target.value)}
+                                        style={{
+                                            width: "100%", padding: "11px 14px", background: "rgba(0,0,0,0.6)",
+                                            border: "1px solid rgba(251,146,60,0.2)", borderRadius: "10px",
+                                            color: "#fff", fontSize: "14px", outline: "none",
+                                        }}>
+                                        <option value="bike">🏍️ Bike</option>
+                                        <option value="car">🚗 Car</option>
+                                        <option value="van">🚐 Van</option>
+                                        <option value="truck">🚛 Truck</option>
+                                    </select>
+                                </div>
+                            </div>
+                            {field("License Number", "licenseNumber", "text", "LIC123456")}
 
-                    <button type="submit" disabled={loading} style={{
-                        padding: "13px", borderRadius: "10px", border: "none", cursor: "pointer",
-                        background: "linear-gradient(135deg, #f97316, #ea580c)",
-                        color: "#fff", fontSize: "15px", fontWeight: 700,
-                        opacity: loading ? 0.7 : 1, marginTop: "4px",
-                    }}>
-                        {loading ? "Registering..." : "Register as Driver"}
-                    </button>
-                </form>
+                            {error && (
+                                <div style={{ padding: "10px 14px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "8px", color: "#f87171", fontSize: "13px" }}>
+                                    {error}
+                                </div>
+                            )}
 
-                <p style={{ textAlign: "center", marginTop: "18px", fontSize: "13px", color: "#64748b" }}>
-                    Already have an account?{" "}
-                    <Link href="/driver/login" style={{ color: "#fb923c" }}>Sign in</Link>
-                </p>
+                            <button type="submit" disabled={loading} style={{
+                                padding: "13px", borderRadius: "10px", border: "none", cursor: "pointer",
+                                background: "linear-gradient(135deg, #f97316, #ea580c)",
+                                color: "#fff", fontSize: "15px", fontWeight: 700,
+                                opacity: loading ? 0.7 : 1, marginTop: "4px",
+                            }}>
+                                {loading ? "Registering..." : "Register as Driver"}
+                            </button>
+                        </form>
+
+                        <p style={{ textAlign: "center", marginTop: "18px", fontSize: "13px", color: "#64748b" }}>
+                            Already have an account?{" "}
+                            <Link href="/driver/login" style={{ color: "#fb923c" }}>Sign in</Link>
+                        </p>
+                    </>
+                )}
             </div>
         </div>
     );

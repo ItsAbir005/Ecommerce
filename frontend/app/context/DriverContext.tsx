@@ -63,7 +63,8 @@ export function DriverProvider({ children }: { children: ReactNode }) {
             console.log("📦 New delivery assigned:", data);
             // Store in localStorage so dashboard can refresh
             localStorage.setItem("pendingDelivery", JSON.stringify(data));
-            window.dispatchEvent(new Event("deliveryAssigned"));
+            // Dispatch a CustomEvent so dashboard can read the shipment details
+            window.dispatchEvent(new CustomEvent("deliveryAssigned", { detail: data }));
         });
         setSocket(s);
         return () => { s.disconnect(); };

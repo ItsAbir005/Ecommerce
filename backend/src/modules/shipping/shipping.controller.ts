@@ -6,6 +6,8 @@ import {
     getShipmentByOrder,
     updateShipmentStatus,
     confirmDelivery,
+    acceptDelivery,
+    rejectDelivery,
 } from './shipping.service';
 import { ShipmentStatus } from '../../models/Shipment';
 
@@ -52,6 +54,32 @@ export const confirmDeliveryHandler = async (req: DriverRequest, res: Response):
             otp
         );
         res.json({ message: 'Delivery confirmed!', shipment });
+    } catch (err: any) {
+        res.status(400).json({ message: err.message });
+    }
+};
+
+// POST /api/shipping/:id/accept  — driver accepts delivery
+export const acceptDeliveryHandler = async (req: DriverRequest, res: Response): Promise<any> => {
+    try {
+        const shipment = await acceptDelivery(
+            req.params.id as string,
+            req.driver!._id.toString()
+        );
+        res.json(shipment);
+    } catch (err: any) {
+        res.status(400).json({ message: err.message });
+    }
+};
+
+// POST /api/shipping/:id/reject  — driver rejects delivery so it can be re-assigned
+export const rejectDeliveryHandler = async (req: DriverRequest, res: Response): Promise<any> => {
+    try {
+        const shipment = await rejectDelivery(
+            req.params.id as string,
+            req.driver!._id.toString()
+        );
+        res.json(shipment);
     } catch (err: any) {
         res.status(400).json({ message: err.message });
     }

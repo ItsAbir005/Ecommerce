@@ -57,7 +57,7 @@ const DriverSchema: Schema = new Schema(
 );
 
 // ── Indexes ────────────────────────────────────────────────────────────────────
-DriverSchema.index({ email: 1 }, { unique: true });
+// email unique index is already created by { unique: true } on the field above
 DriverSchema.index({ status: 1 });
 DriverSchema.index({ isAvailable: 1 });
 

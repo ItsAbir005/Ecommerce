@@ -1,7 +1,7 @@
 {
   "name": "frontend",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -H 127.0.0.1 -p 8081",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
