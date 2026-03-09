@@ -15,6 +15,7 @@ interface Shipment {
     otp: string;
     deliveryAddress: { street: string; city: string; state: string; zip: string; country: string };
     estimatedDelivery?: string;
+    order_id?: { _id: string };
     assignedAt?: string;
     pickedUpAt?: string;
 }
@@ -122,9 +123,16 @@ export default function DeliveryDetailPage() {
             {/* Header */}
             <div style={{ marginBottom: "28px" }}>
                 <p style={{ color: "#94a3b8", fontSize: "13px", margin: "0 0 4px" }}>← Delivery Detail</p>
-                <h1 style={{ fontSize: "26px", fontWeight: 700, color: "#fff", margin: "0 0 4px" }}>
-                    {shipment.trackingCode}
-                </h1>
+                <div style={{ display: "flex", alignItems: "baseline", gap: "12px" }}>
+                    <h1 style={{ fontSize: "28px", fontWeight: 700, color: "#fff", margin: "0 0 4px", fontFamily: "monospace" }}>
+                        {shipment.trackingCode}
+                    </h1>
+                    {shipment.order_id && (
+                        <span style={{ fontSize: "14px", color: "#94a3b8", fontFamily: "monospace", background: "rgba(255,255,255,0.05)", padding: "4px 8px", borderRadius: "6px" }}>
+                            Order #{shipment.order_id._id.slice(-10).toUpperCase()}
+                        </span>
+                    )}
+                </div>
             </div>
 
             {/* Progress stepper */}

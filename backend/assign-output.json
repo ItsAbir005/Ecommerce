@@ -1,93 +1,9 @@
 [
   {
-    "id": "69ac6d2d542f9b3897ad092b",
-    "success": true,
-    "driver": {
-      "_id": "69ac6d2d542f9b3897ad092b",
-      "order_id": "69a675315b83144a142e7b8f",
-      "driver_id": null,
-      "status": "pending",
-      "estimatedDelivery": "2026-03-10T18:23:41.183Z",
-      "pickupAddress": {
-        "street": "123 Aura Warehouse",
-        "city": "Mumbai",
-        "state": "Maharashtra",
-        "zip": "400001",
-        "country": "India"
-      },
-      "deliveryAddress": {
-        "street": "Gulmohor Street",
-        "city": "Rourkela",
-        "state": "Odisha",
-        "zip": "760098",
-        "country": "India"
-      },
-      "trackingCode": "TRK2C84B1BC",
-      "otp": "960731",
-      "createdAt": "2026-03-07T18:23:41.206Z",
-      "updatedAt": "2026-03-07T18:23:41.206Z",
-      "__v": 0
-    }
-  },
-  {
-    "id": "69ac6d2d542f9b3897ad0934",
-    "success": true,
-    "driver": {
-      "_id": "69ac6d2d542f9b3897ad0934",
-      "order_id": "69a83704465de16f7a78a689",
-      "driver_id": null,
-      "status": "pending",
-      "estimatedDelivery": "2026-03-10T18:23:41.315Z",
-      "pickupAddress": {
-        "street": "123 Aura Warehouse",
-        "city": "Mumbai",
-        "state": "Maharashtra",
-        "zip": "400001",
-        "country": "India"
-      },
-      "deliveryAddress": {
-        "street": "Gulmohor Street",
-        "city": "Rourkela",
-        "state": "Odisha",
-        "zip": "760098",
-        "country": "India"
-      },
-      "trackingCode": "TRKBE96C349",
-      "otp": "242470",
-      "createdAt": "2026-03-07T18:23:41.321Z",
-      "updatedAt": "2026-03-07T18:23:41.321Z",
-      "__v": 0
-    }
-  },
-  {
     "id": "69ac6d2d542f9b3897ad093d",
-    "success": true,
-    "driver": {
-      "_id": "69ac6d2d542f9b3897ad093d",
-      "order_id": "69a90d5eb1a65e62b2eaa8ca",
-      "driver_id": null,
-      "status": "pending",
-      "estimatedDelivery": "2026-03-10T18:23:41.369Z",
-      "pickupAddress": {
-        "street": "123 Aura Warehouse",
-        "city": "Mumbai",
-        "state": "Maharashtra",
-        "zip": "400001",
-        "country": "India"
-      },
-      "deliveryAddress": {
-        "street": "Gulmohor Street",
-        "city": "Rourkela",
-        "state": "Odisha",
-        "zip": "760098",
-        "country": "India"
-      },
-      "trackingCode": "TRK3775F8C6",
-      "otp": "575031",
-      "createdAt": "2026-03-07T18:23:41.371Z",
-      "updatedAt": "2026-03-07T18:23:41.371Z",
-      "__v": 0
-    }
+    "success": false,
+    "error": "Socket.io not initialized. Call initSocket(httpServer) first.",
+    "stack": "Error: Socket.io not initialized. Call initSocket(httpServer) first.\n    at getIO (C:\\Users\\ABIR MAITY\\OneDrive\\Desktop\\project\\backend\\src\\config\\socket.ts:78:20)\n    at assignDriver (C:\\Users\\ABIR MAITY\\OneDrive\\Desktop\\project\\backend\\src\\modules\\shipping\\shipping.service.ts:103:21)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async forceAssign (C:\\Users\\ABIR MAITY\\OneDrive\\Desktop\\project\\backend\\force-assign.ts:23:28)"
   },
   {
     "id": "69ac6d2d542f9b3897ad0946",

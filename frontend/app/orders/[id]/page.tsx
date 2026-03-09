@@ -26,6 +26,7 @@ type Shipment = {
     _id: string;
     trackingCode: string;
     status: string;
+    otp?: string;
     estimatedDelivery?: string;
     driver_id?: {
         name: string;
@@ -289,6 +290,23 @@ export default function OrderDetailPage() {
                             {SHIPMENT_STATUS_ICONS[shipment.status]} {shipment.status.replace(/_/g, ' ').toUpperCase()}
                         </span>
                     </div>
+
+                    {/* Delivery OTP Badge */}
+                    {shipment.otp && shipment.status !== 'delivered' && (
+                        <div className="mx-6 mt-4 p-4 rounded-xl flex items-center justify-between"
+                            style={{ background: 'linear-gradient(135deg, rgba(52,211,153,0.15) 0%, rgba(52,211,153,0.05) 100%)', border: '1px solid rgba(52,211,153,0.3)' }}>
+                            <div className="flex items-center gap-3">
+                                <span className="text-2xl text-emerald-400">🔒</span>
+                                <div>
+                                    <p className="font-bold text-white text-sm">Delivery PIN</p>
+                                    <p className="text-xs text-muted mt-0.5">Share this OTP with your driver upon arrival</p>
+                                </div>
+                            </div>
+                            <div className="font-mono text-xl font-black tracking-widest text-emerald-400 bg-emerald-950/50 px-4 py-1.5 rounded-lg border border-emerald-500/20 shadow-inner">
+                                {shipment.otp}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Progress stepper */}
                     <div className="px-6 py-5">

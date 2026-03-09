@@ -188,7 +188,6 @@ export const confirmDelivery = async (
 // ── 5. Get Shipment by Order ID (for customer tracking) ───────────────────────
 export const getShipmentByOrder = async (orderId: string) => {
     return Shipment.findOne({ order_id: orderId })
-        .select('-otp') // Never expose OTP to customer
         .populate('driver_id', 'name phone vehicleNumber vehicleType');
 };
 

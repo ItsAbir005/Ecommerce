@@ -10,6 +10,7 @@ interface ActiveDelivery {
     status: string;
     deliveryAddress: { street: string; city: string; state: string; zip: string; country: string };
     estimatedDelivery?: string;
+    order_id?: { _id: string };
 }
 
 interface PendingRequest {
@@ -241,7 +242,14 @@ export default function DriverDashboard() {
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
                         <div>
                             <p style={{ margin: "0 0 4px", color: "#94a3b8", fontSize: "12px", textTransform: "uppercase" }}>Tracking Code</p>
-                            <p style={{ margin: 0, fontWeight: 700, color: "#fb923c", fontFamily: "monospace", fontSize: "16px" }}>{activeDelivery.trackingCode}</p>
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                <p style={{ margin: 0, fontWeight: 700, color: "#fb923c", fontFamily: "monospace", fontSize: "18px" }}>{activeDelivery.trackingCode}</p>
+                                {activeDelivery.order_id && (
+                                    <span style={{ fontSize: "12px", color: "#64748b", fontFamily: "monospace", background: "rgba(255,255,255,0.05)", padding: "2px 6px", borderRadius: "4px" }}>
+                                        Order #{activeDelivery.order_id._id.slice(-10).toUpperCase()}
+                                    </span>
+                                )}
+                            </div>
                         </div>
                         <span style={{
                             padding: "4px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: 600,
