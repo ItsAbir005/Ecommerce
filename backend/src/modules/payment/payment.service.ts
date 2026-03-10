@@ -179,6 +179,15 @@ export class PaymentService {
                         }
                         await order.save();
                     }
+
+                    // ── Trigger shipping workflow ─────────────────
+                    await rabbitMQ.publishEvent('payment.success', {
+                        paymentId: payment._id.toString(),
+                        orderId: payment.order_id.toString(),
+                        userId: order?.user_id?.toString(),
+                        amount: payment.amount,
+                    });
+
                     return { verified: true, status: 'paid' };
                 }
             } catch (error: any) {
