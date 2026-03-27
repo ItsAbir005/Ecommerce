@@ -31,22 +31,42 @@ const StatCard = ({ icon, label, value, sub, color }: {
     </div>
 );
 
-const QuickLink = ({ href, icon, label, desc }: { href: string; icon: string; label: string; desc: string }) => (
-    <Link href={href} style={{
+const QuickLink = ({ href, icon, label, desc, target }: { href: string; icon: string; label: string; desc: string; target?: string; }) => {
+    const isExternal = target === "_blank";
+    const commonStyle = {
         display: "flex", alignItems: "center", gap: "16px", padding: "18px 20px",
         background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)",
         borderRadius: "14px", textDecoration: "none", transition: "all 0.2s",
-    }}
-        onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(99,102,241,0.3)")}
-        onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)")}>
-        <span style={{ fontSize: "28px" }}>{icon}</span>
-        <div>
-            <p style={{ margin: 0, fontWeight: 600, color: "#e2e8f0", fontSize: "15px" }}>{label}</p>
-            <p style={{ margin: "2px 0 0", fontSize: "13px", color: "#64748b" }}>{desc}</p>
-        </div>
-        <span style={{ marginLeft: "auto", color: "#64748b", fontSize: "18px" }}>→</span>
-    </Link>
-);
+    };
+    const content = (
+        <>
+            <span style={{ fontSize: "28px" }}>{icon}</span>
+            <div>
+                <p style={{ margin: 0, fontWeight: 600, color: "#e2e8f0", fontSize: "15px" }}>{label}</p>
+                <p style={{ margin: "2px 0 0", fontSize: "13px", color: "#64748b" }}>{desc}</p>
+            </div>
+            <span style={{ marginLeft: "auto", color: "#64748b", fontSize: "18px" }}>→</span>
+        </>
+    );
+
+    if (isExternal) {
+        return (
+            <a href={href} target={target} rel="noopener noreferrer" style={commonStyle}
+                onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(99,102,241,0.3)")}
+                onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)")}>
+                {content}
+            </a>
+        );
+    }
+
+    return (
+        <Link href={href} style={commonStyle}
+            onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(99,102,241,0.3)")}
+            onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)")}>
+            {content}
+        </Link>
+    );
+};
 
 export default function AdminDashboard() {
     const [stats, setStats] = useState<Stats | null>(null);
@@ -138,7 +158,7 @@ export default function AdminDashboard() {
                 <QuickLink href="/admin/products" icon="📦" label="Manage Products" desc="Add, edit or delete products" />
                 <QuickLink href="/admin/drivers" icon="🚚" label="Manage Drivers" desc="View and block driver accounts" />
                 <QuickLink href="/admin/register" icon="🔐" label="Create Admin Account" desc="Add another admin with secret key" />
-                <QuickLink href="/" icon="🛍️" label="View Store" desc="See customer-facing storefront" />
+                <QuickLink href="/" icon="🛍️" label="View Store" desc="See customer-facing storefront" target="_blank" />
             </div>
         </div>
     );

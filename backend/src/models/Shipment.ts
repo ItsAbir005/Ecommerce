@@ -20,6 +20,7 @@ export interface IShipment extends Document {
     pickedUpAt?: Date;
     deliveredAt?: Date;
     failureReason?: string;
+    rejectedBy?: mongoose.Types.ObjectId[];
     pickupAddress: {
         street: string; city: string; state: string; zip: string; country: string;
     };
@@ -61,6 +62,7 @@ const ShipmentSchema = new Schema(
         pickedUpAt: { type: Date },
         deliveredAt: { type: Date },
         failureReason: { type: String },
+        rejectedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Driver' }],
         pickupAddress: { type: AddressSchema, required: true },
         deliveryAddress: { type: AddressSchema, required: true },
     },

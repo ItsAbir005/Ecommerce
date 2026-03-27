@@ -7,6 +7,7 @@ exports.PaymentService = void 0;
 const stripe_1 = __importDefault(require("stripe"));
 const Payment_1 = require("../../models/Payment");
 const Order_1 = require("../../models/Order");
+const rabbitmq_1 = require("../../config/rabbitmq");
 // Ensure STRIPE_SECRET_KEY is populated in production
 const stripe = new stripe_1.default(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder', {
     // Explicitly cast to any to avoid version mismatch errors in different TS environments
@@ -32,7 +33,7 @@ class PaymentService {
                         product_data: {
                             name: `Order #${orderId}`,
                         },
-                        unit_amount: amount * 100, // Stripe expects amount in cents
+                        unit_amount: Math.round(amount * 100), // Stripe expects amount in cents
                     },
                     quantity: 1,
                 },
@@ -73,10 +74,17 @@ class PaymentService {
                     if (order) {
                         order.payment_status = 'paid';
                         if (order.status === 'pending') {
-                            order.status = 'confirmed';
+                            order.status = 'paid';
                         }
                         await order.save();
                     }
+                    // ── Publish payment.success to message queue ─────────────
+                    // Workers will send payment confirmation email + initiate shipping
+                    await rabbitmq_1.rabbitMQ.publishEvent('payment.success', {
+                        orderId: payment.order_id.toString(),
+                        userId: order?.user_id?.toString(),
+                        amount: payment.amount,
+                    });
                 }
             }
         }
@@ -111,9 +119,9 @@ class PaymentService {
     static async processRefund(paymentId) {
         const payment = await Payment_1.Payment.findById(paymentId);
         if (!payment)
-            throw new Error("Payment not found");
+            throw new Error('Payment not found');
         if (payment.status !== 'successful')
-            throw new Error("Only successful payments can be refunded");
+            throw new Error('Only successful payments can be refunded');
         // The transaction_id generally acts as the Payment Intent when 'successful'
         const refund = await stripe.refunds.create({
             payment_intent: payment.transaction_id,
@@ -128,8 +136,54 @@ class PaymentService {
                 order.status = 'cancelled';
                 await order.save();
             }
+            // ── Publish refund job to message queue ───────────────────────────
+            // Background worker will send refund confirmation email
+            await rabbitmq_1.rabbitMQ.publishEvent('job.process_refund', {
+                orderId: payment.order_id.toString(),
+                userId: order?.user_id?.toString(),
+                amount: payment.amount,
+            });
         }
         return refund;
+    }
+    static async verifyPaymentStatus(orderId) {
+        // Get the latest payment for this order
+        const payment = await Payment_1.Payment.findOne({ order_id: orderId }).sort({ _id: -1 });
+        if (!payment)
+            throw new Error('Payment record not found');
+        if (payment.status === 'successful') {
+            return { verified: true, status: 'paid' };
+        }
+        if (payment.status === 'pending' && payment.transaction_id && payment.transaction_id.startsWith('cs_')) {
+            try {
+                const session = await stripe.checkout.sessions.retrieve(payment.transaction_id);
+                if (session.payment_status === 'paid') {
+                    payment.status = 'successful';
+                    payment.transaction_id = session.payment_intent || session.id;
+                    await payment.save();
+                    const order = await Order_1.Order.findById(orderId);
+                    if (order) {
+                        order.payment_status = 'paid';
+                        if (order.status === 'pending') {
+                            order.status = 'paid';
+                        }
+                        await order.save();
+                    }
+                    // ── Trigger shipping workflow ─────────────────
+                    await rabbitmq_1.rabbitMQ.publishEvent('payment.success', {
+                        paymentId: payment._id.toString(),
+                        orderId: payment.order_id.toString(),
+                        userId: order?.user_id?.toString(),
+                        amount: payment.amount,
+                    });
+                    return { verified: true, status: 'paid' };
+                }
+            }
+            catch (error) {
+                console.error('Stripe session retrieval error:', error.message);
+            }
+        }
+        return { verified: false, status: payment.status };
     }
 }
 exports.PaymentService = PaymentService;

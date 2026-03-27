@@ -4,9 +4,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 require("./instrument");
+const http_1 = __importDefault(require("http"));
 const app_1 = __importDefault(require("./app"));
-const PORT = process.env.PORT ? parseInt(process.env.PORT) : 5000;
-app_1.default.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+const socket_1 = require("./config/socket");
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : 4000;
+// Create HTTP server from Express app (required for Socket.io)
+const httpServer = http_1.default.createServer(app_1.default);
+// Attach Socket.io to the HTTP server
+(0, socket_1.initSocket)(httpServer);
+httpServer.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`🔌 Socket.io ready on ws://localhost:${PORT}`);
 });
 //# sourceMappingURL=server.js.map

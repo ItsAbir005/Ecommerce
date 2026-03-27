@@ -129,8 +129,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     useEffect(() => {
         if (!isAuthPage) {
-            const token = localStorage.getItem("adminToken");
-            if (!token) router.push("/admin/login");
+            const adminToken = localStorage.getItem("adminToken");
+            if (!adminToken) {
+                router.push("/admin/login");
+            } else {
+                // Auto-sync token for existing sessions so they don't have to log out
+                if (!localStorage.getItem("token")) {
+                    localStorage.setItem("token", adminToken);
+                }
+            }
         }
     }, [pathname, isAuthPage, router]);
 

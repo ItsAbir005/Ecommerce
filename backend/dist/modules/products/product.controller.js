@@ -2,6 +2,20 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getProductById = exports.getProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = void 0;
 const Product_1 = require("../../models/Product");
+const redis_1 = require("../../config/redis");
+// === Helper: Invalidate Product List Caches ===
+const invalidateProductCaches = async () => {
+    try {
+        const keys = await redis_1.redisClient.sMembers('products:cache');
+        if (keys.length > 0) {
+            await redis_1.redisClient.del(keys);
+        }
+        await redis_1.redisClient.del('products:cache'); // Clear the set itself
+    }
+    catch (err) {
+        console.error("Redis cache invalidation error:", err);
+    }
+};
 // === Admin Controllers ===
 // @desc    Create a product
 // @route   POST /api/products
@@ -20,6 +34,8 @@ const createProduct = async (req, res) => {
             discount,
         });
         const createdProduct = await product.save();
+        // Invalidate product cache
+        await invalidateProductCaches();
         return res.status(201).json(createdProduct);
     }
     catch (error) {
@@ -45,6 +61,9 @@ const updateProduct = async (req, res) => {
             product.variants = variants || product.variants;
             product.discount = discount !== undefined ? discount : product.discount;
             const updatedProduct = await product.save();
+            // Invalidate product cache
+            await invalidateProductCaches();
+            await redis_1.redisClient.del(`product:${req.params.id}`);
             return res.json(updatedProduct);
         }
         else {
@@ -65,6 +84,9 @@ const deleteProduct = async (req, res) => {
         const product = await Product_1.Product.findById(req.params.id);
         if (product) {
             await product.deleteOne();
+            // Invalidate product cache
+            await invalidateProductCaches();
+            await redis_1.redisClient.del(`product:${req.params.id}`);
             return res.json({ message: "Product removed" });
         }
         else {
@@ -85,6 +107,13 @@ const getProducts = async (req, res) => {
     try {
         const pageSize = Number(req.query.limit) || 10;
         const page = Number(req.query.page) || 1;
+        // Generate a unique cache key based on the query parameters
+        const cacheKey = `products:cache:${Buffer.from(JSON.stringify(req.query)).toString('base64')}`;
+        // Attempt to get data from cache
+        const cachedData = await redis_1.redisClient.get(cacheKey);
+        if (cachedData) {
+            return res.json(JSON.parse(cachedData));
+        }
         // Search
         const keyword = req.query.search
             ? {
@@ -118,12 +147,17 @@ const getProducts = async (req, res) => {
             .sort(sortObj)
             .limit(pageSize)
             .skip(pageSize * (page - 1));
-        return res.json({
+        const responseData = {
             products,
             page,
             pages: Math.ceil(count / pageSize),
             total: count
-        });
+        };
+        // Cache the response for 1 hour
+        await redis_1.redisClient.setEx(cacheKey, 3600, JSON.stringify(responseData));
+        // Add this key to a master list so we can easily bust all list caches
+        await redis_1.redisClient.sAdd('products:cache', cacheKey);
+        return res.json(responseData);
     }
     catch (error) {
         console.error("Error fetching products:", error);
@@ -136,8 +170,15 @@ exports.getProducts = getProducts;
 // @access  Public
 const getProductById = async (req, res) => {
     try {
+        const cacheKey = `product:${req.params.id}`;
+        const cachedProduct = await redis_1.redisClient.get(cacheKey);
+        if (cachedProduct) {
+            return res.json(JSON.parse(cachedProduct));
+        }
         const product = await Product_1.Product.findById(req.params.id);
         if (product) {
+            // Cache single product for 1 hour
+            await redis_1.redisClient.setEx(cacheKey, 3600, JSON.stringify(product));
             return res.json(product);
         }
         else {

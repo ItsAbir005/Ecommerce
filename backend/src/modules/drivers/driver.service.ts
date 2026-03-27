@@ -61,7 +61,8 @@ export const updateDriverLocation = async (driverId: string, lat: number, lng: n
 export const findNearestDriver = async (
     lat: number,
     lng: number,
-    radiusKm: number = 50
+    radiusKm: number = 50,
+    rejectedBy?: string[]
 ): Promise<string | null> => {
     // geoSearchWith returns array of { member: string, distance: number }
     const results = await redisClient.geoSearchWith(
@@ -77,6 +78,11 @@ export const findNearestDriver = async (
 
     // Verify each candidate is still online + available in DB (Redis can be stale)
     for (const driverId of driverIds) {
+        if (rejectedBy?.includes(driverId)) {
+            console.log(`[GEO] Skipping driver ${driverId} (previously rejected)`);
+            continue;
+        }
+
         const driver = await Driver.findOne({ _id: driverId, status: 'online', isAvailable: true });
         if (driver) {
             console.log(`[GEO] Selected available driver: ${driverId}`);

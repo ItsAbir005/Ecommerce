@@ -26,6 +26,8 @@ export default function AdminLoginPage() {
             if (!res.ok) throw new Error(data.message);
             // Store admin token separately from customer token
             localStorage.setItem("adminToken", data.token);
+            // Also store as normal token so admin can access storefront seamlessly
+            localStorage.setItem("token", data.token);
             localStorage.setItem("adminProfile", JSON.stringify(data.admin));
             router.push("/admin");
         } catch (err: any) {

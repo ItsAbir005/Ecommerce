@@ -83,7 +83,8 @@ export const assignDriver = async (
     if (!shipment) throw new Error('Shipment not found');
     if (shipment.status !== 'pending') return shipment;
 
-    const driverId = await findNearestDriver(pickupLat, pickupLng, 5000);
+    const rejectedByIds = shipment.rejectedBy?.map(id => id.toString()) || [];
+    const driverId = await findNearestDriver(pickupLat, pickupLng, 5000, rejectedByIds);
 
     if (!driverId) {
         console.warn(`⚠️  No available drivers for shipment ${shipmentId} within 5000km. Will retry later.`);
@@ -213,6 +214,11 @@ export const rejectDelivery = async (shipmentId: string, driverId: string) => {
     shipment.driver_id = undefined as any;
     shipment.status = 'pending';
     shipment.assignedAt = undefined as any;
+    if (!shipment.rejectedBy) shipment.rejectedBy = [];
+    const objId = new mongoose.Types.ObjectId(driverId);
+    if (!shipment.rejectedBy.some(id => id.equals(objId))) {
+        shipment.rejectedBy.push(objId);
+    }
     await shipment.save();
 
     // Release driver back to available

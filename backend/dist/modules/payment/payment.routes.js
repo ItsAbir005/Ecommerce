@@ -12,5 +12,8 @@ router.post('/webhook', payment_controller_1.webhook);
 // Endpoint to trigger a manual refund
 // POST /api/payments/refund/:payment_id
 router.post('/refund/:payment_id', payment_controller_1.refund);
+// Endpoint to verify payment status manually (fallback for webhooks in dev)
+// GET /api/payments/verify/:order_id
+router.get('/verify/:order_id', payment_controller_1.verifyPayment);
 exports.default = router;
 //# sourceMappingURL=payment.routes.js.map

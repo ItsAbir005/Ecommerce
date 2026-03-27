@@ -30,7 +30,7 @@ export class PaymentService {
                         product_data: {
                             name: `Order #${orderId}`,
                         },
-                        unit_amount: amount * 100, // Stripe expects amount in cents
+                        unit_amount: Math.round(amount * 100), // Stripe expects amount in cents
                     },
                     quantity: 1,
                 },

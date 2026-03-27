@@ -57,5 +57,9 @@ const UserSchema = new mongoose_1.Schema({
     },
     role: { type: String, enum: ['user', 'admin'], default: 'user' }
 }, { timestamps: true });
+// ── Indexes ────────────────────────────────────────────────────────────────────
+// email unique index is already created by { unique: true } on the field above
+UserSchema.index({ role: 1 });
+UserSchema.index({ isBlocked: 1 });
 exports.User = mongoose_1.default.model('User', UserSchema);
 //# sourceMappingURL=User.js.map

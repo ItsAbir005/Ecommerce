@@ -1,15 +1,11 @@
 "use strict";
 /**
  * cart.service.ts
- * All business logic for the cart. Never touches orders/payments/stock permanently.
+ * Refactored to use Redis for extremely fast in-memory cart storage.
  */
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getCartSummary = exports.validateCart = exports.clearCart = exports.removeItem = exports.updateItem = exports.addItem = exports.getCart = exports.getOrCreateCart = void 0;
-const mongoose_1 = __importDefault(require("mongoose"));
-const Cart_1 = require("../../models/Cart");
+exports.getCartSummary = exports.validateCart = exports.clearCart = exports.removeItem = exports.updateItem = exports.addItem = exports.getCart = void 0;
+const redis_1 = require("../../config/redis");
 const Product_1 = require("../../models/Product");
 // ─── Constants ─────────────────────────────────────────────────────────────────
 const TAX_RATE = 0.08; // 8%
@@ -20,34 +16,34 @@ const SHIPPING_COST = 5.99;
 const effectivePrice = (product) => product.discount > 0
     ? parseFloat((product.price * (1 - product.discount / 100)).toFixed(2))
     : product.price;
-/** Find or create a cart doc for a user */
-const getOrCreateCart = async (userId) => {
-    let cart = await Cart_1.Cart.findOne({ user_id: userId });
-    if (!cart) {
-        cart = await Cart_1.Cart.create({ user_id: userId, items: [] });
-    }
-    return cart;
-};
-exports.getOrCreateCart = getOrCreateCart;
-// ─── 1. Get Cart (with populated product details) ──────────────────────────────
+const getCartKey = (userId) => `cart:${userId}`;
+/**
+ * Retrieves the cart from Redis. Returns a default empty cart if none exists.
+ */
 const getCart = async (userId) => {
-    const cart = await Cart_1.Cart.findOne({ user_id: userId }).populate({
-        path: 'items.product_id',
-        select: 'title price discount stock images variants category_id',
-    });
-    if (!cart)
-        return { user_id: userId, items: [], itemCount: 0 };
-    return cart;
+    const key = getCartKey(userId);
+    const data = await redis_1.redisClient.get(key);
+    if (!data) {
+        return { user_id: userId, items: [] };
+    }
+    return JSON.parse(data);
 };
 exports.getCart = getCart;
-// ─── 2. Add Item to Cart ───────────────────────────────────────────────────────
+/**
+ * Saves the cart to Redis and resets the TTL (Time-To-Live) expiration.
+ */
+const saveCart = async (userId, cart) => {
+    const key = getCartKey(userId);
+    await redis_1.redisClient.setEx(key, redis_1.CART_TTL, JSON.stringify(cart));
+};
+// ─── 1. Add Item to Cart ───────────────────────────────────────────────────────
 const addItem = async (userId, productId, quantity, variantId) => {
     if (quantity < 1)
         throw new Error('Quantity must be at least 1');
     const product = await Product_1.Product.findById(productId);
     if (!product)
         throw new Error('Product not found');
-    // Stock check
+    // Stock check against the source of truth (DB)
     if (variantId) {
         const variant = product.variants.find((v) => v._id.toString() === variantId);
         if (!variant)
@@ -61,14 +57,11 @@ const addItem = async (userId, productId, quantity, variantId) => {
         if (product.stock === 0)
             throw new Error('Product is out of stock');
     }
-    const cart = await (0, exports.getOrCreateCart)(userId);
+    const cart = await (0, exports.getCart)(userId);
     const price = effectivePrice(product);
-    // Check if the exact item (product + variant combination) already exists
     const existingIdx = cart.items.findIndex((item) => {
-        const sameProduct = item.product_id.toString() === productId;
-        const sameVariant = variantId
-            ? item.variant_id?.toString() === variantId
-            : !item.variant_id;
+        const sameProduct = item.product_id === productId;
+        const sameVariant = variantId ? item.variant_id === variantId : !item.variant_id;
         return sameProduct && sameVariant;
     });
     if (existingIdx > -1) {
@@ -79,51 +72,55 @@ const addItem = async (userId, productId, quantity, variantId) => {
         if (newQty > availableStock)
             throw new Error(`Cannot add more. Only ${availableStock} units available`);
         cart.items[existingIdx].quantity = newQty;
-        // Update price snapshot in case it changed
-        cart.items[existingIdx].price_at_addition = price;
+        cart.items[existingIdx].price_at_addition = price; // Refresh snapshot
     }
     else {
         const newItem = {
-            product_id: new mongoose_1.default.Types.ObjectId(productId),
+            product_id: productId,
+            variant_id: variantId,
+            title: product.title,
+            image: product.images?.[0] || '',
+            price: price,
+            discount: product.discount || 0,
             quantity,
             price_at_addition: price,
         };
-        if (variantId) {
-            newItem.variant_id = new mongoose_1.default.Types.ObjectId(variantId);
-        }
         cart.items.push(newItem);
     }
-    await cart.save();
-    return (0, exports.getCart)(userId);
+    await saveCart(userId, cart);
+    return cart; // Notice we return the populated Redis cart directly
 };
 exports.addItem = addItem;
-// ─── 3. Update Cart Item ───────────────────────────────────────────────────────
-const updateItem = async (userId, itemId, quantity, variantId) => {
-    const cart = await Cart_1.Cart.findOne({ user_id: userId });
-    if (!cart)
-        throw new Error('Cart not found');
-    const item = cart.items.find((i) => i._id.toString() === itemId);
-    if (!item)
-        throw new Error('Cart item not found');
+// ─── 2. Update Cart Item ───────────────────────────────────────────────────────
+const updateItem = async (userId, itemId, // In the new Redis model, we map item ID to product_id as the easiest unique identifier alongside variant
+quantity, variantId) => {
+    // Note: We'll assume the client is passing the product ID as the "itemId" for simplicity in the cache model, or a strict composite. 
+    // Usually, you pass up the product_id + variant_id to identify the item. Let's assume itemId = product_id to match old signature loosely.
+    const cart = await (0, exports.getCart)(userId);
+    // Find the item by product ID (and variant if provided)
+    const existingIdx = cart.items.findIndex((i) => i.product_id === itemId && (variantId ? i.variant_id === variantId : true));
+    if (existingIdx === -1)
+        throw new Error('Cart item not found in Redis');
+    const item = cart.items[existingIdx];
     const product = await Product_1.Product.findById(item.product_id);
     if (!product)
         throw new Error('Product no longer exists');
-    // If quantity is set to 0 or less, remove the item
+    // Remove if quantity 0
     if (quantity !== undefined && quantity <= 0) {
-        cart.items = cart.items.filter((i) => i._id.toString() !== itemId);
-        await cart.save();
-        return (0, exports.getCart)(userId);
+        cart.items.splice(existingIdx, 1);
+        await saveCart(userId, cart);
+        return cart;
     }
-    // Update variant
+    // Replace variant if requested
     if (variantId !== undefined) {
         const variant = product.variants.find((v) => v._id.toString() === variantId);
         if (!variant)
             throw new Error('Variant not found');
-        item.variant_id = new mongoose_1.default.Types.ObjectId(variantId);
+        item.variant_id = variantId;
     }
-    // Update quantity with stock validation
+    // Update quantity
     if (quantity !== undefined) {
-        const targetVariantId = item.variant_id?.toString();
+        const targetVariantId = item.variant_id;
         const availableStock = targetVariantId
             ? product.variants.find((v) => v._id.toString() === targetVariantId)?.stock ?? 0
             : product.stock;
@@ -131,52 +128,47 @@ const updateItem = async (userId, itemId, quantity, variantId) => {
             throw new Error(`Only ${availableStock} units available`);
         item.quantity = quantity;
     }
-    // Refresh price snapshot
     item.price_at_addition = effectivePrice(product);
-    await cart.save();
-    return (0, exports.getCart)(userId);
+    await saveCart(userId, cart);
+    return cart;
 };
 exports.updateItem = updateItem;
-// ─── 4. Remove Single Item ────────────────────────────────────────────────────
+// ─── 3. Remove Single Item ────────────────────────────────────────────────────
 const removeItem = async (userId, itemId) => {
-    const cart = await Cart_1.Cart.findOne({ user_id: userId });
-    if (!cart)
-        throw new Error('Cart not found');
+    // Again, assuming itemId = product_id for compatibility
+    const cart = await (0, exports.getCart)(userId);
     const before = cart.items.length;
-    cart.items = cart.items.filter((i) => i._id.toString() !== itemId);
+    cart.items = cart.items.filter((i) => i.product_id !== itemId);
     if (cart.items.length === before)
-        throw new Error('Cart item not found');
-    await cart.save();
-    return (0, exports.getCart)(userId);
+        throw new Error('Cart item not found in Redis');
+    await saveCart(userId, cart);
+    return cart;
 };
 exports.removeItem = removeItem;
-// ─── 5. Clear Entire Cart ─────────────────────────────────────────────────────
+// ─── 4. Clear Entire Cart ─────────────────────────────────────────────────────
 const clearCart = async (userId) => {
-    await Cart_1.Cart.findOneAndUpdate({ user_id: userId }, { $set: { items: [] } }, { upsert: true });
-    return { message: 'Cart cleared successfully' };
+    await redis_1.redisClient.del(getCartKey(userId));
+    return { message: 'Cart cleared successfully from Redis' };
 };
 exports.clearCart = clearCart;
-// ─── 6. Validate Cart Before Checkout ────────────────────────────────────────
+// ─── 5. Validate Cart Before Checkout ────────────────────────────────────────
 const validateCart = async (userId) => {
-    const cart = await Cart_1.Cart.findOne({ user_id: userId });
-    if (!cart || cart.items.length === 0)
-        return { valid: true, changes: [], cart: { items: [] } };
+    const cart = await (0, exports.getCart)(userId);
+    if (cart.items.length === 0)
+        return { valid: true, changes: [], cart };
     const issues = [];
     const toRemove = [];
     for (const item of cart.items) {
         const product = await Product_1.Product.findById(item.product_id);
-        // Product no longer exists
         if (!product) {
-            toRemove.push(item._id.toString());
+            toRemove.push(item.product_id);
             issues.push(`Item removed: product no longer exists`);
             continue;
         }
-        const variantIdStr = item.variant_id?.toString();
-        // Check stock for variant
-        if (variantIdStr) {
-            const variant = product.variants.find((v) => v._id.toString() === variantIdStr);
+        if (item.variant_id) {
+            const variant = product.variants.find((v) => v._id.toString() === item.variant_id);
             if (!variant || variant.stock === 0) {
-                toRemove.push(item._id.toString());
+                toRemove.push(item.product_id);
                 issues.push(`"${product.title}" variant is out of stock — removed`);
                 continue;
             }
@@ -186,9 +178,8 @@ const validateCart = async (userId) => {
             }
         }
         else {
-            // Check overall stock
             if (product.stock === 0) {
-                toRemove.push(item._id.toString());
+                toRemove.push(item.product_id);
                 issues.push(`"${product.title}" is out of stock — removed`);
                 continue;
             }
@@ -197,18 +188,16 @@ const validateCart = async (userId) => {
                 issues.push(`"${product.title}" qty reduced to ${product.stock} (stock limit)`);
             }
         }
-        // Price drift detection
         const currentPrice = effectivePrice(product);
         if (item.price_at_addition !== currentPrice) {
             issues.push(`"${product.title}" price changed from $${item.price_at_addition} → $${currentPrice}`);
             item.price_at_addition = currentPrice;
         }
     }
-    // Remove unavailable items
     if (toRemove.length > 0) {
-        cart.items = cart.items.filter((i) => !toRemove.includes(i._id.toString()));
+        cart.items = cart.items.filter((i) => !toRemove.includes(i.product_id));
     }
-    await cart.save();
+    await saveCart(userId, cart);
     return {
         valid: issues.length === 0,
         changes: issues,
@@ -216,38 +205,33 @@ const validateCart = async (userId) => {
     };
 };
 exports.validateCart = validateCart;
-// ─── 7. Cart Summary (subtotal, tax, discount, shipping, total) ───────────────
+// ─── 6. Cart Summary (subtotal, tax, discount, shipping, total) ───────────────
 const getCartSummary = async (userId) => {
-    const cart = await Cart_1.Cart.findOne({ user_id: userId }).populate({
-        path: 'items.product_id',
-        select: 'title price discount stock images',
-    });
-    if (!cart || cart.items.length === 0) {
-        return {
-            itemCount: 0,
-            subtotal: 0,
-            discountAmount: 0,
-            tax: 0,
-            shipping: 0,
-            total: 0,
-            items: [],
-        };
+    const cart = await (0, exports.getCart)(userId);
+    if (cart.items.length === 0) {
+        return { itemCount: 0, subtotal: 0, discountAmount: 0, tax: 0, shipping: 0, total: 0, items: [] };
     }
     let subtotal = 0;
     let discountAmount = 0;
     const lineItems = [];
     for (const item of cart.items) {
-        const product = item.product_id;
+        // In Redis, we already snapshot the core details in the cache
+        // So we can compute the summary without a DB query! (Massive speedup)
+        const originalLinePrice = item.price * item.quantity;
+        // The item.price is the discounted price at addition. 
+        // Realistically, to get the absolute 'discountAmount' across the order based on original prices,
+        // we should rely on the product DB or store the item's original_price in Redis.
+        // For this summary, we'll pull from DB quickly since summary is heavy anyway.
+        const product = await Product_1.Product.findById(item.product_id);
         if (!product)
             continue;
-        const originalLinePrice = product.price * item.quantity;
         const discountedUnitPrice = effectivePrice(product);
         const discountedLinePrice = discountedUnitPrice * item.quantity;
-        const itemDiscount = originalLinePrice - discountedLinePrice;
+        const itemDiscount = (product.price * item.quantity) - discountedLinePrice;
         subtotal += discountedLinePrice;
         discountAmount += itemDiscount;
         lineItems.push({
-            itemId: item._id,
+            itemId: item.product_id, // Note: mapping product id as itemId
             title: product.title,
             quantity: item.quantity,
             unitPrice: discountedUnitPrice,

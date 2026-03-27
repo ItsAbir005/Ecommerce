@@ -26,6 +26,8 @@ export default function AdminRegisterPage() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.message);
             localStorage.setItem("adminToken", data.token);
+            // Also store as normal token so admin can access storefront seamlessly
+            localStorage.setItem("token", data.token);
             localStorage.setItem("adminProfile", JSON.stringify(data.admin));
             router.push("/admin");
         } catch (err: any) {

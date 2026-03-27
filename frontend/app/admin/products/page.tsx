@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { fetchApi } from "../../lib/api";
-import { useAuth } from "../../context/AuthContext";
 import { useRouter } from "next/navigation";
 
 type Product = {
@@ -16,7 +15,6 @@ type Product = {
 };
 
 export default function AdminProductsPage() {
-    const { user, loading: authLoading } = useAuth();
     const router = useRouter();
 
     const [products, setProducts] = useState<Product[]>([]);
@@ -25,21 +23,11 @@ export default function AdminProductsPage() {
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState<Partial<Product>>({ title: "", description: "", price: 0, stock: 0, discount: 0 });
 
-    useEffect(() => {
-        if (!authLoading) {
-            if (!user) {
-                router.push("/login");
-            } else if (user.role !== "admin") {
-                // If you want strictly an admin route
-                router.push("/");
-            }
-        }
-    }, [user, authLoading, router]);
-
     const loadProducts = async () => {
         try {
             setLoading(true);
-            const data = await fetchApi("/products?limit=100");
+            const token = localStorage.getItem("adminToken");
+            const data = await fetchApi("/products?limit=100", { token: token || undefined });
             if (data && data.products) setProducts(data.products);
         } catch (error) {
             console.error("Failed to fetch products:", error);
@@ -49,10 +37,8 @@ export default function AdminProductsPage() {
     };
 
     useEffect(() => {
-        if (user && user.role === "admin") {
-            loadProducts();
-        }
-    }, [user]);
+        loadProducts();
+    }, []);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -70,7 +56,8 @@ export default function AdminProductsPage() {
     const handleDelete = async (id: string) => {
         if (!confirm("Are you sure you want to delete this product?")) return;
         try {
-            await fetchApi(`/products/${id}`, { method: "DELETE" });
+            const token = localStorage.getItem("adminToken");
+            await fetchApi(`/products/${id}`, { method: "DELETE", token: token || undefined });
             loadProducts();
         } catch (error) {
             alert("Failed to delete product");
@@ -81,13 +68,19 @@ export default function AdminProductsPage() {
         e.preventDefault();
         try {
             if (isEditing && formData._id) {
+                const token = localStorage.getItem("adminToken");
                 await fetchApi(`/products/${formData._id}`, {
                     method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    token: token || undefined,
                     body: JSON.stringify(formData),
                 });
             } else {
+                const token = localStorage.getItem("adminToken");
                 await fetchApi(`/products`, {
                     method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    token: token || undefined,
                     body: JSON.stringify(formData),
                 });
             }
@@ -99,7 +92,7 @@ export default function AdminProductsPage() {
         }
     };
 
-    if (authLoading || loading) return <div className="container-custom pt-20 pb-12 text-center">Loading...</div>;
+    if (loading) return <div className="container-custom pt-20 pb-12 text-center">Loading...</div>;
 
     return (
         <div className="container-custom py-12">

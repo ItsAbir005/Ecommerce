@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.refund = exports.webhook = exports.initializePayment = void 0;
+exports.verifyPayment = exports.refund = exports.webhook = exports.initializePayment = void 0;
 const payment_service_1 = require("./payment.service");
 const Order_1 = require("../../models/Order");
 const initializePayment = async (req, res) => {
@@ -72,4 +72,24 @@ const refund = async (req, res) => {
     }
 };
 exports.refund = refund;
+const verifyPayment = async (req, res) => {
+    try {
+        const order_id = req.params.order_id;
+        if (!order_id) {
+            res.status(400).json({ success: false, message: 'order_id is required' });
+            return;
+        }
+        const result = await payment_service_1.PaymentService.verifyPaymentStatus(order_id);
+        res.status(200).json({
+            success: true,
+            message: 'Payment status verified',
+            data: result,
+        });
+    }
+    catch (error) {
+        console.error('Payment verification error:', error);
+        res.status(500).json({ success: false, message: error.message || 'Internal server error' });
+    }
+};
+exports.verifyPayment = verifyPayment;
 //# sourceMappingURL=payment.controller.js.map
