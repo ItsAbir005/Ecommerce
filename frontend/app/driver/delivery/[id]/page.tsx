@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useDriver } from "../../../context/DriverContext";
+import ChatBox from "../../../components/ChatBox";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
 
@@ -41,7 +42,7 @@ const NEXT_LABEL: Partial<Record<ShipmentStatus, string>> = {
 
 export default function DeliveryDetailPage() {
     const { id } = useParams() as { id: string };
-    const { token } = useDriver();
+    const { token, driver } = useDriver();
     const router = useRouter();
     const [shipment, setShipment] = useState<Shipment | null>(null);
     const [loading, setLoading] = useState(true);
@@ -49,6 +50,7 @@ export default function DeliveryDetailPage() {
     const [otp, setOtp] = useState("");
     const [error, setError] = useState("");
     const [showOtp, setShowOtp] = useState(false);
+    const [isChatOpen, setIsChatOpen] = useState(false);
 
     const fetchShipment = async () => {
         try {
@@ -174,14 +176,24 @@ export default function DeliveryDetailPage() {
                 <p style={{ margin: "0 0 12px", color: "#94a3b8", fontSize: "13px" }}>
                     {shipment.deliveryAddress.city}, {shipment.deliveryAddress.state} {shipment.deliveryAddress.zip}
                 </p>
-                <a href={mapsUrl} target="_blank" rel="noreferrer" style={{
-                    display: "inline-block", padding: "8px 16px",
-                    background: "rgba(251,146,60,0.15)", border: "1px solid rgba(251,146,60,0.3)",
-                    borderRadius: "8px", color: "#fb923c", fontSize: "13px", fontWeight: 600,
-                    textDecoration: "none",
-                }}>
-                    🗺️ Open in Google Maps
-                </a>
+                <div style={{ display: "flex", gap: "12px", marginTop: "12px", flexWrap: "wrap" }}>
+                    <a href={mapsUrl} target="_blank" rel="noreferrer" style={{
+                        display: "inline-block", padding: "8px 16px",
+                        background: "rgba(251,146,60,0.15)", border: "1px solid rgba(251,146,60,0.3)",
+                        borderRadius: "8px", color: "#fb923c", fontSize: "13px", fontWeight: 600,
+                        textDecoration: "none",
+                    }}>
+                        🗺️ Open in Google Maps
+                    </a>
+                    <button onClick={() => setIsChatOpen(true)} style={{
+                        display: "inline-block", padding: "8px 16px",
+                        background: "rgba(52,211,153,0.15)", border: "1px solid rgba(52,211,153,0.3)",
+                        borderRadius: "8px", color: "#34d399", fontSize: "13px", fontWeight: 600,
+                        cursor: "pointer",
+                    }}>
+                        💬 Chat with Customer
+                    </button>
+                </div>
             </div>
 
             {/* Error */}
@@ -237,6 +249,17 @@ export default function DeliveryDetailPage() {
                 }}>
                     {updating ? "Updating..." : nextLabel}
                 </button>
+            )}
+
+            {isChatOpen && shipment && (
+                <ChatBox 
+                    shipmentId={shipment._id}
+                    userMode="driver"
+                    userId={driver?.id || ""}
+                    token={token || undefined}
+                    recipientName="Customer"
+                    onClose={() => setIsChatOpen(false)}
+                />
             )}
         </div>
     );

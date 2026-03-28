@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useAuth } from "../../context/AuthContext";
 import { fetchApi } from "../../lib/api";
+import ChatBox from "../../components/ChatBox";
+import MapTracker from "../../components/MapTracker";
 
 type OrderDetail = {
     _id: string;
@@ -33,6 +35,7 @@ type Shipment = {
         phone: string;
         vehicleNumber: string;
         vehicleType: string;
+        currentLocation?: { lat: number; lng: number };
     };
 };
 
@@ -76,6 +79,14 @@ export default function OrderDetailPage() {
     const [showCancel, setShowCancel] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [shipment, setShipment] = useState<Shipment | null>(null);
+    const [isChatOpen, setIsChatOpen] = useState(false);
+    const [token, setToken] = useState<string | undefined>(undefined);
+
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            setToken(localStorage.getItem("token") || undefined);
+        }
+    }, []);
 
     // FIX: Only redirect if authentication has finished loading and user is still null
     useEffect(() => {
@@ -353,10 +364,10 @@ export default function OrderDetailPage() {
                                         {shipment.driver_id.vehicleType} · {shipment.driver_id.vehicleNumber}
                                     </p>
                                 </div>
-                                <a href={`tel:${shipment.driver_id.phone}`} className="ml-auto text-xs px-3 py-1.5 rounded-lg font-medium"
-                                    style={{ background: 'rgba(251,146,60,0.15)', color: '#fb923c', border: '1px solid rgba(251,146,60,0.25)', textDecoration: 'none' }}>
-                                    📞 Call
-                                </a>
+                                <button onClick={() => setIsChatOpen(true)} className="ml-auto text-xs px-3 py-1.5 rounded-lg font-medium"
+                                    style={{ background: 'rgba(52,211,153,0.15)', color: '#34d399', border: '1px solid rgba(52,211,153,0.25)', textDecoration: 'none', cursor: 'pointer' }}>
+                                    💬 Chat
+                                </button>
                             </div>
                         </div>
                     )}
@@ -368,6 +379,17 @@ export default function OrderDetailPage() {
                                 {new Date(shipment.estimatedDelivery).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
                             </span>
                         </p>
+                    )}
+
+                    {/* Live Map Tracker */}
+                    {['assigned', 'picked_up', 'out_for_delivery'].includes(shipment.status) && (
+                        <div className="mx-6 mb-6">
+                            <MapTracker 
+                                orderId={order._id} 
+                                deliveryAddress={order.shipping_address} 
+                                initialDriverLocation={shipment.driver_id?.currentLocation} 
+                            />
+                        </div>
                     )}
                 </div>
             )}
@@ -503,6 +525,16 @@ export default function OrderDetailPage() {
                     )}
                 </div>
             </div>
+            {isChatOpen && shipment && shipment.driver_id && (
+                <ChatBox 
+                    shipmentId={shipment._id}
+                    userMode="customer"
+                    userId={user?._id}
+                    token={token}
+                    recipientName={shipment.driver_id.name}
+                    onClose={() => setIsChatOpen(false)}
+                />
+            )}
         </div>
     );
 }

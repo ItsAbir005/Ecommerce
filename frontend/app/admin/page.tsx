@@ -87,7 +87,7 @@ export default function AdminDashboard() {
                     fetch(`${API}/orders?limit=1000`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
                     fetch(`${API}/products?limit=1`).then(r => r.json()),
                     fetch(`${API}/users`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-                    fetch(`${API}/drivers`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+                    fetch(`${API}/drivers/all`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
                 ]);
 
                 const orders = ordersRes.status === "fulfilled" ? ordersRes.value : null;
@@ -97,7 +97,7 @@ export default function AdminDashboard() {
 
                 const orderList: any[] = orders?.orders || [];
                 const revenue = orderList.filter(o => o.payment_status === "paid").reduce((s: number, o: any) => s + (o.total_amount || 0), 0);
-                const pending = orderList.filter(o => o.status === "pending").length;
+                const pending = orderList.filter(o => ["pending", "paid"].includes(o.status)).length;
 
                 setStats({
                     totalOrders: orders?.total || orderList.length,

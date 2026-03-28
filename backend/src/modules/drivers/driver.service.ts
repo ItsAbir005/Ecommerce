@@ -11,6 +11,7 @@
 import { Driver } from '../../models/Driver';
 import { Shipment } from '../../models/Shipment';
 import { redisClient } from '../../config/redis';
+import { getIO } from '../../config/socket';
 
 const GEO_KEY = 'drivers:online'; // Redis GeoSet key
 
@@ -51,6 +52,17 @@ export const updateDriverLocation = async (driverId: string, lat: number, lng: n
     });
     // Update position in Redis GeoSet
     await redisClient.geoAdd(GEO_KEY, { longitude: lng, latitude: lat, member: driverId });
+    
+    // Broadcast to customer live-tracking room if active delivery exists
+    try {
+        const activeDelivery = await getActiveDelivery(driverId);
+        if (activeDelivery && activeDelivery.order_id) {
+            getIO().to(`order:${activeDelivery.order_id._id.toString()}`).emit('driver:location', { lat, lng });
+        }
+    } catch (e) {
+        console.error("Failed to broadcast driver location", e);
+    }
+    
     return { lat, lng };
 };
 

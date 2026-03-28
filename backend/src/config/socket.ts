@@ -14,6 +14,7 @@
 import { Server as HttpServer } from 'http';
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
+import Message from '../models/Message';
 
 let io: SocketIOServer;
 
@@ -60,6 +61,35 @@ export const initSocket = (httpServer: HttpServer): SocketIOServer => {
         socket.on('track:order', ({ orderId }: { orderId: string }) => {
             socket.join(`order:${orderId}`);
             console.log(`📍 Client tracking order: ${orderId}`);
+        });
+
+        // Chat logic
+        socket.on('join:chat', ({ shipmentId }: { shipmentId: string }) => {
+            socket.join(`chat:${shipmentId}`);
+            console.log(`💬 User/Driver joined chat:${shipmentId}`);
+        });
+
+        socket.on('send:message', async (data: { shipmentId: string; senderMode: 'customer'|'driver'; senderId: string; text: string }) => {
+            try {
+                // Save to DB
+                let finalSenderId = data.senderId;
+                // fallback to socket user ID if available
+                if (!finalSenderId && userId) {
+                    finalSenderId = userId;
+                }
+                
+                const newMessage = await Message.create({
+                    shipmentId: data.shipmentId,
+                    senderMode: data.senderMode,
+                    senderId: finalSenderId || "anonymous",
+                    text: data.text
+                });
+                
+                // Broadcast to everyone in the room (including sender to confirm)
+                io.to(`chat:${data.shipmentId}`).emit('receive:message', newMessage);
+            } catch (err) {
+                console.error("Error saving message", err);
+            }
         });
 
         socket.on('disconnect', () => {

@@ -189,7 +189,7 @@ export const confirmDelivery = async (
 // ── 5. Get Shipment by Order ID (for customer tracking) ───────────────────────
 export const getShipmentByOrder = async (orderId: string) => {
     return Shipment.findOne({ order_id: orderId })
-        .populate('driver_id', 'name phone vehicleNumber vehicleType');
+        .populate('driver_id', 'name phone vehicleNumber vehicleType currentLocation');
 };
 
 // ── 6. Accept Delivery ────────────────────────────────────────────────────────
