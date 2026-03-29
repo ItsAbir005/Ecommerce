@@ -28,6 +28,12 @@ function Navigation() {
           {mounted && user && (
             <Link href="/orders" className="text-muted hover:text-white transition-colors duration-200 text-sm">Orders</Link>
           )}
+          {mounted && user && (
+            <Link href="/sell" className="text-muted hover:text-white transition-colors duration-200 text-sm flex items-center gap-1">
+              <span>🏷️</span> Sell
+            </Link>
+          )}
+
 
           {/* Cart icon with live badge */}
           <Link href="/cart" className="relative text-muted hover:text-white transition-colors duration-200 text-sm flex items-center gap-1.5">

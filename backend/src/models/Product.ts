@@ -14,6 +14,9 @@ export interface IProduct extends Document {
         stock: number;
     }[];
     discount: number;
+    seller_id?: mongoose.Types.ObjectId;
+    status: 'pending' | 'approved' | 'rejected';
+    rejectionReason?: string;
 }
 
 const ProductSchema: Schema = new Schema(
@@ -32,6 +35,13 @@ const ProductSchema: Schema = new Schema(
             }
         ],
         discount: { type: Number, default: 0, min: 0, max: 100 },
+        seller_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+        status: {
+            type: String,
+            enum: ['pending', 'approved', 'rejected'],
+            default: 'approved', // existing admin-created products remain approved
+        },
+        rejectionReason: { type: String, default: null },
     },
     { timestamps: true }
 );
@@ -45,6 +55,11 @@ ProductSchema.index({ category_id: 1, price: 1 });
 ProductSchema.index({ discount: -1 });
 // Price range filtering
 ProductSchema.index({ price: 1 });
+// Listing review
+ProductSchema.index({ status: 1 });
+ProductSchema.index({ seller_id: 1 });
 
 export const Product = mongoose.model<IProduct>('Product', ProductSchema);
+
+
 

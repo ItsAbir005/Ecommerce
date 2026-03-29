@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { Product } from "../../models/Product";
 import { redisClient } from "../../config/redis";
+import { AuthRequest } from "../../middleware/auth.middleware";
 
 // === Helper: Invalidate Product List Caches ===
 const invalidateProductCaches = async () => {
@@ -9,7 +10,7 @@ const invalidateProductCaches = async () => {
         if (keys.length > 0) {
             await redisClient.del(keys);
         }
-        await redisClient.del('products:cache'); // Clear the set itself
+        await redisClient.del('products:cache');
     } catch (err) {
         console.error("Redis cache invalidation error:", err);
     }
@@ -17,7 +18,7 @@ const invalidateProductCaches = async () => {
 
 // === Admin Controllers ===
 
-// @desc    Create a product
+// @desc    Create a product (admin)
 // @route   POST /api/products
 // @access  Private/Admin
 export const createProduct = async (req: Request, res: Response): Promise<any> => {
@@ -33,11 +34,10 @@ export const createProduct = async (req: Request, res: Response): Promise<any> =
             images,
             variants,
             discount,
+            status: 'approved',
         });
 
         const createdProduct = await product.save();
-
-        // Invalidate product cache
         await invalidateProductCaches();
 
         return res.status(201).json(createdProduct);
@@ -67,8 +67,6 @@ export const updateProduct = async (req: Request, res: Response): Promise<any> =
             product.discount = discount !== undefined ? discount : product.discount;
 
             const updatedProduct = await product.save();
-
-            // Invalidate product cache
             await invalidateProductCaches();
             await redisClient.del(`product:${req.params.id}`);
 
@@ -91,8 +89,6 @@ export const deleteProduct = async (req: Request, res: Response): Promise<any> =
 
         if (product) {
             await product.deleteOne();
-
-            // Invalidate product cache
             await invalidateProductCaches();
             await redisClient.del(`product:${req.params.id}`);
 
@@ -106,9 +102,67 @@ export const deleteProduct = async (req: Request, res: Response): Promise<any> =
     }
 };
 
+// @desc    Get all pending sell listings (for admin review)
+// @route   GET /api/products/admin/pending
+// @access  Private/Admin
+export const getPendingListings = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const listings = await Product.find({ status: 'pending' })
+            .populate('seller_id', 'name email')
+            .populate('category_id', 'name')
+            .sort({ createdAt: -1 });
+
+        return res.json(listings);
+    } catch (error) {
+        console.error("Error fetching pending listings:", error);
+        return res.status(500).json({ message: "Server error fetching pending listings" });
+    }
+};
+
+// @desc    Approve a sell listing
+// @route   PATCH /api/products/admin/:id/approve
+// @access  Private/Admin
+export const approveListing = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const product = await Product.findById(req.params.id);
+        if (!product) return res.status(404).json({ message: "Listing not found" });
+
+        product.status = 'approved';
+        product.rejectionReason = undefined;
+        await product.save();
+        await invalidateProductCaches();
+
+        return res.json({ message: "Listing approved", product });
+    } catch (error) {
+        console.error("Error approving listing:", error);
+        return res.status(500).json({ message: "Server error approving listing" });
+    }
+};
+
+// @desc    Reject a sell listing
+// @route   PATCH /api/products/admin/:id/reject
+// @access  Private/Admin
+export const rejectListing = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const product = await Product.findById(req.params.id);
+        if (!product) return res.status(404).json({ message: "Listing not found" });
+
+        const { reason } = req.body;
+        product.status = 'rejected';
+        product.rejectionReason = reason || 'Your listing did not meet our guidelines.';
+        await product.save();
+        await invalidateProductCaches();
+
+        return res.json({ message: "Listing rejected", product });
+    } catch (error) {
+        console.error("Error rejecting listing:", error);
+        return res.status(500).json({ message: "Server error rejecting listing" });
+    }
+};
+
 // === Public Controllers ===
 
-// @desc    Fetch all products (with pagination, filtering, search, sorting)
+// @desc    Fetch all approved products (with pagination, filtering, search, sorting)
 // @route   GET /api/products
 // @access  Public
 export const getProducts = async (req: Request, res: Response): Promise<any> => {
@@ -116,41 +170,30 @@ export const getProducts = async (req: Request, res: Response): Promise<any> => 
         const pageSize = Number(req.query.limit) || 10;
         const page = Number(req.query.page) || 1;
 
-        // Generate a unique cache key based on the query parameters
         const cacheKey = `products:cache:${Buffer.from(JSON.stringify(req.query)).toString('base64')}`;
-
-        // Attempt to get data from cache
         const cachedData = await redisClient.get(cacheKey);
         if (cachedData) {
             return res.json(JSON.parse(cachedData));
         }
 
-        // Search
         const keyword = req.query.search
-            ? {
-                title: {
-                    $regex: req.query.search as string,
-                    $options: "i",
-                },
-            }
+            ? { title: { $regex: req.query.search as string, $options: "i" } }
             : {};
 
-        // Filtering
-        const filter: any = { ...keyword };
+        // Always restrict to approved products in public listing
+        const filter: any = { ...keyword, status: 'approved' };
         if (req.query.category) filter.category_id = req.query.category;
 
-        // Sorting
         let sortObj: any = {};
         if (req.query.sort) {
             const sortStr = req.query.sort as string;
-            // e.g., ?sort=price or ?sort=-price for descending
             if (sortStr.startsWith("-")) {
                 sortObj[sortStr.substring(1)] = -1;
             } else {
                 sortObj[sortStr] = 1;
             }
         } else {
-            sortObj = { createdAt: -1 }; // default sort
+            sortObj = { createdAt: -1 };
         }
 
         const count = await Product.countDocuments(filter);
@@ -166,9 +209,7 @@ export const getProducts = async (req: Request, res: Response): Promise<any> => 
             total: count
         };
 
-        // Cache the response for 1 hour
         await redisClient.setEx(cacheKey, 3600, JSON.stringify(responseData));
-        // Add this key to a master list so we can easily bust all list caches
         await redisClient.sAdd('products:cache', cacheKey);
 
         return res.json(responseData);
@@ -193,7 +234,6 @@ export const getProductById = async (req: Request, res: Response): Promise<any> 
         const product = await Product.findById(req.params.id);
 
         if (product) {
-            // Cache single product for 1 hour
             await redisClient.setEx(cacheKey, 3600, JSON.stringify(product));
             return res.json(product);
         } else {
@@ -202,5 +242,96 @@ export const getProductById = async (req: Request, res: Response): Promise<any> 
     } catch (error) {
         console.error("Error fetching product by ID:", error);
         return res.status(500).json({ message: "Server error fetching product" });
+    }
+};
+
+// === Customer Sell Controllers ===
+
+// @desc    Customer submits a product listing for sale
+// @route   POST /api/products/sell
+// @access  Private (any authenticated user)
+export const sellProduct = async (req: AuthRequest, res: Response): Promise<any> => {
+    try {
+        const { title, description, price, stock, category_id, variants, discount } = req.body;
+
+        // Collect uploaded image URLs from Cloudinary (via multer)
+        const imageFiles = req.files as Express.Multer.File[];
+        const images = imageFiles?.map((f: any) => f.path || f.secure_url || f.location) ?? [];
+
+        if (!title || !description || !price || !stock || !category_id) {
+            return res.status(400).json({ message: "Title, description, price, stock and category are required" });
+        }
+
+        const parsedVariants = variants
+            ? (typeof variants === 'string' ? JSON.parse(variants) : variants)
+            : [];
+
+        const product = new Product({
+            title,
+            description,
+            price: Number(price),
+            stock: Number(stock),
+            category_id,
+            images,
+            variants: parsedVariants,
+            discount: discount ? Number(discount) : 0,
+            seller_id: req.user?._id,
+            status: 'pending',
+        });
+
+        const createdProduct = await product.save();
+
+        return res.status(201).json({
+            message: "Your listing has been submitted and is pending review. We'll notify you once it's approved.",
+            product: createdProduct,
+        });
+    } catch (error) {
+        console.error("Error creating sell listing:", error);
+        return res.status(500).json({ message: "Server error creating listing" });
+    }
+};
+
+// @desc    Get current user's own sell listings (all statuses)
+// @route   GET /api/products/my-listings
+// @access  Private
+export const getMySellListings = async (req: AuthRequest, res: Response): Promise<any> => {
+    try {
+        const listings = await Product.find({ seller_id: req.user?._id })
+            .populate('category_id', 'name')
+            .sort({ createdAt: -1 });
+
+        return res.json(listings);
+    } catch (error) {
+        console.error("Error fetching user listings:", error);
+        return res.status(500).json({ message: "Server error fetching listings" });
+    }
+};
+
+// @desc    Delete own pending or rejected listing
+// @route   DELETE /api/products/my-listings/:id
+// @access  Private
+export const deleteMyListing = async (req: AuthRequest, res: Response): Promise<any> => {
+    try {
+        const product = await Product.findById(req.params.id);
+
+        if (!product) {
+            return res.status(404).json({ message: "Listing not found" });
+        }
+
+        if (product.seller_id?.toString() !== req.user?._id.toString()) {
+            return res.status(403).json({ message: "Not authorized to delete this listing" });
+        }
+
+        if (product.status === 'approved') {
+            return res.status(400).json({ message: "Approved listings cannot be deleted. Contact support." });
+        }
+
+        await product.deleteOne();
+        await invalidateProductCaches();
+
+        return res.json({ message: "Listing deleted" });
+    } catch (error) {
+        console.error("Error deleting listing:", error);
+        return res.status(500).json({ message: "Server error deleting listing" });
     }
 };

@@ -50,6 +50,7 @@ function AdminNav() {
     const links = [
         { href: "/admin", label: "Dashboard", icon: "📊" },
         { href: "/admin/products", label: "Products", icon: "📦" },
+        { href: "/admin/listings", label: "Listings", icon: "🏷️" },
         { href: "/admin/drivers", label: "Drivers", icon: "🚚" },
     ];
 
