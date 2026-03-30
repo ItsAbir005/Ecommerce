@@ -48,3 +48,4 @@ app.get("/api/debug-sentry", function mainHandler(req, res) {
 Sentry.setupExpressErrorHandler(app);
 
 export default app;
+

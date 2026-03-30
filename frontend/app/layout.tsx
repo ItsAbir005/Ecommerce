@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { CartProvider, useCart } from "./context/CartContext";
 import { ToastProvider } from "./components/Toast";
+import SupportAgent from "./components/SupportAgent";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -73,6 +74,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <ToastProvider>
               <Navigation />
               <main>{children}</main>
+              <SupportAgent />
             </ToastProvider>
           </CartProvider>
         </AuthProvider>
