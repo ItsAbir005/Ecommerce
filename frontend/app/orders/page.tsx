@@ -1,10 +1,5 @@
-import dynamic from "next/dynamic";
 import { Suspense } from "react";
-
-// Dynamically import with ssr:false so useSearchParams() is NEVER called
-// during static generation / server-side rendering — this is the only
-// approach that is 100% reliable with Turbopack on Vercel.
-const OrdersContent = dynamic(() => import("./OrdersContent"), { ssr: false });
+import OrdersContent from "./OrdersContent";
 
 export default function OrdersPage() {
     return (

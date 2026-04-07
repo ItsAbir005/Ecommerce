@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import { fetchApi } from "../lib/api";
 import { useToast } from "../components/Toast";
@@ -35,7 +35,6 @@ const STATUS_ICON: Record<string, string> = {
 export default function OrdersContent() {
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
-    const searchParams = useSearchParams();
     const { toast } = useToast();
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
@@ -47,9 +46,11 @@ export default function OrdersContent() {
         if (!authLoading && !user) router.push("/login");
     }, [user, authLoading, router]);
 
+    // Read ?payment=success from the URL using native browser API
+    // (avoids useSearchParams entirely — no build-time SSR issues)
     useEffect(() => {
-        const payment = searchParams?.get("payment");
-        if (payment === "success") {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("payment") === "success") {
             toast("success", "Payment Successful! 🎉", "Your order is confirmed and emails have been sent.");
         }
     }, []);
