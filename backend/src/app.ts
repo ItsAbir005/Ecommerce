@@ -22,7 +22,10 @@ const app = express();
 connectDB();
 connectRedis();
 rabbitMQ.connect();
-app.use(cors());
+app.use(cors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    credentials: true,
+}));
 
 // Webhook must be parsed as raw data BEFORE express.json()
 app.use("/api/payments/webhook", express.raw({ type: "application/json" }));

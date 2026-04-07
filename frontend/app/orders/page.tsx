@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
@@ -32,7 +32,7 @@ const STATUS_ICON: Record<string, string> = {
     delivered: "📦", cancelled: "❌", returned: "↩️",
 };
 
-export default function OrdersPage() {
+function OrdersContent() {
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -47,14 +47,12 @@ export default function OrdersPage() {
         if (!authLoading && !user) router.push("/login");
     }, [user, authLoading, router]);
 
-    // Show toast if redirected back from payment
     useEffect(() => {
         const payment = searchParams?.get("payment");
         if (payment === "success") {
             toast("success", "Payment Successful! 🎉", "Your order is confirmed and emails have been sent.");
         }
     }, []);
-
 
     useEffect(() => {
         if (!user) return;
@@ -128,7 +126,6 @@ export default function OrdersPage() {
                         <Link href={`/orders/${order._id}`} key={order._id} className="block">
                             <div className="card !p-5 hover:border-primary/50 transition-all hover:-translate-y-0.5 cursor-pointer">
                                 <div className="flex items-start gap-4 flex-wrap">
-                                    {/* Product previews */}
                                     <div className="flex -space-x-2 shrink-0">
                                         {order.order_items.slice(0, 3).map((item, i) => (
                                             <div key={i} className="w-14 h-14 rounded-lg border border-card-border overflow-hidden bg-black/40">
@@ -146,7 +143,6 @@ export default function OrdersPage() {
                                         )}
                                     </div>
 
-                                    {/* Info */}
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-3 flex-wrap mb-1.5">
                                             <span className="font-mono text-xs text-muted">#{order._id.slice(-8).toUpperCase()}</span>
@@ -164,7 +160,6 @@ export default function OrdersPage() {
                                         </p>
                                     </div>
 
-                                    {/* Total */}
                                     <div className="text-right shrink-0">
                                         <p className="text-lg font-bold text-emerald-400">${order.total_amount.toFixed(2)}</p>
                                         <p className="text-xs text-muted mt-0.5">{order.order_items.reduce((s, i) => s + i.quantity, 0)} items</p>
@@ -176,7 +171,6 @@ export default function OrdersPage() {
                 </div>
             )}
 
-            {/* Pagination */}
             {totalPages > 1 && (
                 <div className="flex justify-center gap-2 mt-8">
                     <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
@@ -187,5 +181,17 @@ export default function OrdersPage() {
                 </div>
             )}
         </div>
+    );
+}
+
+export default function OrdersPage() {
+    return (
+        <Suspense fallback={
+            <div className="container-custom py-12 min-h-[80vh] flex items-center justify-center">
+                <div className="text-muted">Loading orders…</div>
+            </div>
+        }>
+            <OrdersContent />
+        </Suspense>
     );
 }
