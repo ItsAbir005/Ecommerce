@@ -70,6 +70,7 @@ const ShipmentSchema = new mongoose_1.Schema({
     pickedUpAt: { type: Date },
     deliveredAt: { type: Date },
     failureReason: { type: String },
+    rejectedBy: [{ type: mongoose_1.default.Schema.Types.ObjectId, ref: 'Driver' }],
     pickupAddress: { type: AddressSchema, required: true },
     deliveryAddress: { type: AddressSchema, required: true },
 }, { timestamps: true });

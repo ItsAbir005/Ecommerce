@@ -5,6 +5,12 @@ import { User, IUser } from "../models/User";
 
 export interface AuthRequest extends Request {
     user?: IUser;
+    headers: Request['headers'];
+    body: any;
+    params: any;
+    query: any;
+    file?: any;
+    files?: any;
 }
 
 export const authMiddleware = async (req: AuthRequest, res: Response, next: NextFunction): Promise<any> => {

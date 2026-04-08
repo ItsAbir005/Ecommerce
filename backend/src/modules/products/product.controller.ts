@@ -255,7 +255,7 @@ export const sellProduct = async (req: AuthRequest, res: Response): Promise<any>
         const { title, description, price, stock, category_id, variants, discount } = req.body;
 
         // Collect uploaded image URLs from Cloudinary (via multer)
-        const imageFiles = req.files as Express.Multer.File[];
+        const imageFiles = (req as any).files;
         const images = imageFiles?.map((f: any) => f.path || f.secure_url || f.location) ?? [];
 
         if (!title || !description || !price || !stock || !category_id) {

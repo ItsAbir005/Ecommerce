@@ -44,7 +44,7 @@ app.use("/api/drivers", driverRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/chat", chatRoutes);
 
-app.get("/api/debug-sentry", function mainHandler(req, res) {
+app.get("/api/debug-sentry", function mainHandler(req: express.Request, res: express.Response) {
     throw new Error("My first Sentry error!");
 });
 

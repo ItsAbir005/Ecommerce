@@ -52,13 +52,17 @@ const payment_routes_1 = __importDefault(require("./modules/payment/payment.rout
 const shipping_routes_1 = __importDefault(require("./modules/shipping/shipping.routes"));
 const driver_routes_1 = __importDefault(require("./modules/drivers/driver.routes"));
 const notification_routes_1 = __importDefault(require("./modules/notifications/notification.routes"));
+const chat_routes_1 = __importDefault(require("./modules/chat/chat.routes"));
 const Sentry = __importStar(require("@sentry/node"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 (0, db_1.connectDB)();
 (0, redis_1.connectRedis)();
 rabbitmq_1.rabbitMQ.connect();
-app.use((0, cors_1.default)());
+app.use((0, cors_1.default)({
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    credentials: true,
+}));
 // Webhook must be parsed as raw data BEFORE express.json()
 app.use("/api/payments/webhook", express_1.default.raw({ type: "application/json" }));
 app.use(express_1.default.json());
@@ -72,6 +76,7 @@ app.use("/api/payments", payment_routes_1.default);
 app.use("/api/shipping", shipping_routes_1.default);
 app.use("/api/drivers", driver_routes_1.default);
 app.use("/api/notifications", notification_routes_1.default);
+app.use("/api/chat", chat_routes_1.default);
 app.get("/api/debug-sentry", function mainHandler(req, res) {
     throw new Error("My first Sentry error!");
 });

@@ -4,6 +4,10 @@ import { Driver, IDriver } from '../models/Driver';
 
 export interface DriverRequest extends Request {
     driver?: IDriver;
+    headers: Request['headers'];
+    body: any;
+    params: any;
+    query: any;
 }
 
 /**

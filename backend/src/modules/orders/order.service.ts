@@ -68,7 +68,7 @@ export const createOrder = async (userId: string, shippingAddress: {
     const cart = await getCart(userId);
     if (!cart || cart.items.length === 0) throw new Error('Cart is empty');
 
-    const orderItems = [];
+    const orderItems: any[] = [];
     let subtotal = 0;
     let discountAmount = 0;
 

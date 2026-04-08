@@ -50,6 +50,13 @@ const ProductSchema = new mongoose_1.Schema({
         }
     ],
     discount: { type: Number, default: 0, min: 0, max: 100 },
+    seller_id: { type: mongoose_1.default.Schema.Types.ObjectId, ref: 'User', default: null },
+    status: {
+        type: String,
+        enum: ['pending', 'approved', 'rejected'],
+        default: 'approved', // existing admin-created products remain approved
+    },
+    rejectionReason: { type: String, default: null },
 }, { timestamps: true });
 // ── Indexes ────────────────────────────────────────────────────────────────────
 // Text index: enables full-text search on title and description
@@ -60,5 +67,8 @@ ProductSchema.index({ category_id: 1, price: 1 });
 ProductSchema.index({ discount: -1 });
 // Price range filtering
 ProductSchema.index({ price: 1 });
+// Listing review
+ProductSchema.index({ status: 1 });
+ProductSchema.index({ seller_id: 1 });
 exports.Product = mongoose_1.default.model('Product', ProductSchema);
 //# sourceMappingURL=Product.js.map

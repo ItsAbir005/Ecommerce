@@ -13,6 +13,7 @@ exports.getDriverProfile = exports.getDeliveryHistory = exports.getActiveDeliver
 const Driver_1 = require("../../models/Driver");
 const Shipment_1 = require("../../models/Shipment");
 const redis_1 = require("../../config/redis");
+const socket_1 = require("../../config/socket");
 const GEO_KEY = 'drivers:online'; // Redis GeoSet key
 // ── Go Online / Offline ───────────────────────────────────────────────────────
 const setDriverStatus = async (driverId, status, lat, lng) => {
@@ -43,6 +44,16 @@ const updateDriverLocation = async (driverId, lat, lng) => {
     });
     // Update position in Redis GeoSet
     await redis_1.redisClient.geoAdd(GEO_KEY, { longitude: lng, latitude: lat, member: driverId });
+    // Broadcast to customer live-tracking room if active delivery exists
+    try {
+        const activeDelivery = await (0, exports.getActiveDelivery)(driverId);
+        if (activeDelivery && activeDelivery.order_id) {
+            (0, socket_1.getIO)().to(`order:${activeDelivery.order_id._id.toString()}`).emit('driver:location', { lat, lng });
+        }
+    }
+    catch (e) {
+        console.error("Failed to broadcast driver location", e);
+    }
     return { lat, lng };
 };
 exports.updateDriverLocation = updateDriverLocation;
@@ -50,13 +61,17 @@ exports.updateDriverLocation = updateDriverLocation;
 // Returns the closest online driver within `radiusKm` of the given coordinates.
 // Uses Redis GEOSEARCH to get member IDs sorted nearest-first, then
 // verifies each driver is still online+available in MongoDB.
-const findNearestDriver = async (lat, lng, radiusKm = 50) => {
+const findNearestDriver = async (lat, lng, radiusKm = 50, rejectedBy) => {
     // geoSearchWith returns array of { member: string, distance: number }
     const results = await redis_1.redisClient.geoSearchWith(GEO_KEY, { longitude: lng, latitude: lat }, { radius: radiusKm, unit: 'km' }, ['WITHDIST'], { SORT: 'ASC', COUNT: 10 });
     const driverIds = results.map(r => r.member);
     console.log(`[GEO] Found ${driverIds.length} candidate drivers within ${radiusKm}km`);
     // Verify each candidate is still online + available in DB (Redis can be stale)
     for (const driverId of driverIds) {
+        if (rejectedBy?.includes(driverId)) {
+            console.log(`[GEO] Skipping driver ${driverId} (previously rejected)`);
+            continue;
+        }
         const driver = await Driver_1.Driver.findOne({ _id: driverId, status: 'online', isAvailable: true });
         if (driver) {
             console.log(`[GEO] Selected available driver: ${driverId}`);

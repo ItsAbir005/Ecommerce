@@ -77,7 +77,8 @@ const assignDriver = async (shipmentId, pickupLat = 22.5726, pickupLng = 88.3639
         throw new Error('Shipment not found');
     if (shipment.status !== 'pending')
         return shipment;
-    const driverId = await (0, driver_service_1.findNearestDriver)(pickupLat, pickupLng, 5000);
+    const rejectedByIds = shipment.rejectedBy?.map(id => id.toString()) || [];
+    const driverId = await (0, driver_service_1.findNearestDriver)(pickupLat, pickupLng, 5000, rejectedByIds);
     if (!driverId) {
         console.warn(`⚠️  No available drivers for shipment ${shipmentId} within 5000km. Will retry later.`);
         return shipment;
@@ -165,7 +166,7 @@ exports.confirmDelivery = confirmDelivery;
 // ── 5. Get Shipment by Order ID (for customer tracking) ───────────────────────
 const getShipmentByOrder = async (orderId) => {
     return Shipment_1.Shipment.findOne({ order_id: orderId })
-        .populate('driver_id', 'name phone vehicleNumber vehicleType');
+        .populate('driver_id', 'name phone vehicleNumber vehicleType currentLocation');
 };
 exports.getShipmentByOrder = getShipmentByOrder;
 // ── 6. Accept Delivery ────────────────────────────────────────────────────────
@@ -195,6 +196,12 @@ const rejectDelivery = async (shipmentId, driverId) => {
     shipment.driver_id = undefined;
     shipment.status = 'pending';
     shipment.assignedAt = undefined;
+    if (!shipment.rejectedBy)
+        shipment.rejectedBy = [];
+    const objId = new mongoose_1.default.Types.ObjectId(driverId);
+    if (!shipment.rejectedBy.some(id => id.equals(objId))) {
+        shipment.rejectedBy.push(objId);
+    }
     await shipment.save();
     // Release driver back to available
     await Driver_1.Driver.findByIdAndUpdate(driverId, { status: 'online', isAvailable: true });

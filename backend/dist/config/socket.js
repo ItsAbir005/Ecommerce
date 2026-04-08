@@ -18,6 +18,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getIO = exports.initSocket = void 0;
 const socket_io_1 = require("socket.io");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const Message_1 = __importDefault(require("../models/Message"));
 let io;
 const initSocket = (httpServer) => {
     io = new socket_io_1.Server(httpServer, {
@@ -56,6 +57,32 @@ const initSocket = (httpServer) => {
         socket.on('track:order', ({ orderId }) => {
             socket.join(`order:${orderId}`);
             console.log(`📍 Client tracking order: ${orderId}`);
+        });
+        // Chat logic
+        socket.on('join:chat', ({ shipmentId }) => {
+            socket.join(`chat:${shipmentId}`);
+            console.log(`💬 User/Driver joined chat:${shipmentId}`);
+        });
+        socket.on('send:message', async (data) => {
+            try {
+                // Save to DB
+                let finalSenderId = data.senderId;
+                // fallback to socket user ID if available
+                if (!finalSenderId && userId) {
+                    finalSenderId = userId;
+                }
+                const newMessage = await Message_1.default.create({
+                    shipmentId: data.shipmentId,
+                    senderMode: data.senderMode,
+                    senderId: finalSenderId || "anonymous",
+                    text: data.text
+                });
+                // Broadcast to everyone in the room (including sender to confirm)
+                io.to(`chat:${data.shipmentId}`).emit('receive:message', newMessage);
+            }
+            catch (err) {
+                console.error("Error saving message", err);
+            }
         });
         socket.on('disconnect', () => {
             if (role === 'driver') {

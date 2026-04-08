@@ -893,7 +893,7 @@ async function seed() {
         // Upload images + build products
         console.log(`\n📤  Uploading images to Cloudinary and inserting ${RAW_PRODUCTS.length} products...\n`);
 
-        const products = [];
+        const products: any[] = [];
         for (let i = 0; i < RAW_PRODUCTS.length; i++) {
             const raw = RAW_PRODUCTS[i];
             process.stdout.write(`  [${String(i + 1).padStart(2, '0')}/${RAW_PRODUCTS.length}]  ${raw.title.substring(0, 50).padEnd(50, ' ')}  `);
