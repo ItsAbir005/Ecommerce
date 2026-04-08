@@ -22,8 +22,20 @@ const app = express();
 connectDB();
 connectRedis();
 rabbitMQ.connect();
+const allowedOrigins = [
+    process.env.FRONTEND_URL?.replace(/\/$/, ""),
+    "http://localhost:3000",
+    "http://localhost:5173",
+].filter(Boolean) as string[];
+
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin) || origin.endsWith(".vercel.app")) {
+            callback(null, true);
+        } else {
+            callback(new Error("Not allowed by CORS"));
+        }
+    },
     credentials: true,
 }));
 
